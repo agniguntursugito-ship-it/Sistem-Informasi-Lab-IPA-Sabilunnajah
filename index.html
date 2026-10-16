@@ -16,12 +16,16 @@
         .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
         .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @media print { body * { visibility: hidden; } #printArea, #printArea * { visibility: visible; } #printArea { position: absolute; left: 0; top: 0; width: 100%; } }
+        /* PENGATURAN CSS CETAK DOKUMEN SEKOLAH */
+        @media print { 
+            body * { visibility: hidden; } 
+            #printArea, #printArea * { visibility: visible; } 
+            #printArea { position: absolute; left: 0; top: 0; width: 100%; font-family: 'Times New Roman', Times, serif !important; color: black !important; } 
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
 
-    <!-- HEADER -->
     <header class="bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 text-white shadow-lg sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center gap-3">
@@ -42,7 +46,7 @@
 
     <main class="flex-grow max-w-7xl mx-auto px-4 py-8 w-full">
         
-        <!-- LOGIN & REGISTER -->
+        <!-- LOGIN & REGISTER DENGAN FITUR LUPA PASSWORD -->
         <div class="max-w-md mx-auto glass p-8 rounded-3xl shadow-soft border mt-12 animate-fade-in relative overflow-hidden" id="loginView">
             <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-500 to-teal-400"></div>
             <div class="text-center mb-8"><div class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl">🧪</div><h2 class="text-2xl font-bold text-slate-800">Portal Masuk</h2></div>
@@ -51,6 +55,10 @@
                 <input class="w-full border-slate-200 border rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500" id="loginPass" placeholder="Password" required type="password">
                 <button class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-md transition-all mt-2" id="btnLoginBtn" type="submit">Masuk ke Sistem</button>
             </form>
+            <div class="flex justify-between items-center mt-5 px-1">
+                <button type="button" onclick="document.getElementById('modalBantuan').classList.remove('hidden')" class="text-xs text-slate-500 hover:text-emerald-600 font-bold flex items-center gap-1">💬 Bantuan WA</button>
+                <button type="button" onclick="lupaPassword()" class="text-xs text-slate-500 hover:text-emerald-600 font-bold">Lupa Password?</button>
+            </div>
             <div class="mt-6 text-center text-sm border-t pt-5">Belum memiliki akun? <button class="text-emerald-600 font-bold hover:underline" onclick="toggleAuth('register')">Daftar Guru</button></div>
         </div>
 
@@ -125,19 +133,18 @@
                 <div class="admin-tab hidden space-y-6" id="tabJadwal">
                     <div class="bg-white p-6 rounded-3xl shadow-soft border border-amber-100">
                         <h3 class="text-xl font-bold text-slate-800 mb-2 flex gap-2 items-center">Antrean Persetujuan <span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-lg text-xs" id="badgeACC">0</span></h3>
-                        <p class="text-xs text-slate-500 mb-6">Tugas ACC / Pembatalan untuk otoritas Unit Anda.</p>
+                        <p class="text-xs text-slate-500 mb-6">Tugas ACC / Pembatalan untuk wilayah otoritas Unit Anda.</p>
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4" id="listPengajuanJadwal"></div>
                     </div>
                     
                     <div class="bg-white p-6 rounded-3xl shadow-soft border">
                         <h3 class="text-xl font-bold text-slate-800 mb-2 flex gap-2 items-center"><span class="text-emerald-500">📅</span> Kalender Jadwal Aktif (Bulan Ini)</h3>
                         <p class="text-xs text-slate-500 mb-6">Klik pada jadwal di tabel bawah untuk membatalkan sepihak.</p>
-                        <!-- Grid Kalender Admin -->
-                        <div id="adminCalendarGrid" class="mb-8 border rounded-xl overflow-hidden shadow-sm bg-slate-50 p-2"></div>
+                        <div id="adminCalendarGrid" class="mb-8 border rounded-xl overflow-hidden shadow-sm bg-slate-50 p-2 text-sm"></div>
                         
                         <div class="overflow-x-auto rounded-2xl border border-slate-100">
                             <table class="w-full text-left border-collapse text-sm">
-                                <thead><tr class="bg-emerald-50/50 text-emerald-800 text-[10px] uppercase border-b"><th class="p-4 font-bold">Jadwal &amp; Peminjam</th><th class="p-4 font-bold">Keperluan &amp; Instrumen</th><th class="p-4 font-bold text-right">Aksi Admin</th></tr></thead>
+                                <thead><tr class="bg-emerald-50/50 text-emerald-800 text-[10px] uppercase border-b"><th class="p-4 font-bold">Rentang Waktu &amp; Peminjam</th><th class="p-4 font-bold">Keperluan &amp; Instrumen</th><th class="p-4 font-bold text-right">Aksi Admin</th></tr></thead>
                                 <tbody class="divide-y divide-slate-50" id="tabelJadwalAktifAdmin"></tbody>
                             </table>
                         </div>
@@ -150,14 +157,17 @@
                         <div class="bg-white p-6 md:p-8 rounded-3xl shadow-soft border">
                             <h3 class="text-xl font-bold text-slate-800 mb-6">🖨️ Cetak Laporan Massal</h3>
                             <div class="space-y-3">
-                                <button class="w-full flex items-center justify-between bg-slate-50 border p-4 rounded-2xl text-left" onclick="cetakLaporanMassal('inventaris')">
-                                    <div class="flex items-center gap-3"><div class="text-lg">📦</div><div><p class="font-bold text-slate-700">Laporan Inventaris Aset</p></div></div><span class="bg-white px-3 py-1.5 rounded-lg text-[10px] font-bold text-emerald-600 border">PDF</span>
+                                <button class="w-full flex items-center justify-between bg-slate-50 border p-4 rounded-2xl text-left hover:bg-slate-100" onclick="cetakLaporanMassal('inventaris')">
+                                    <div class="flex items-center gap-3"><div class="text-lg">📦</div><div><p class="font-bold text-slate-700">Laporan Inventaris Aset</p></div></div><span class="bg-white px-3 py-1.5 rounded-lg text-[10px] font-bold text-emerald-600 border shadow-sm">Cetak PDF</span>
                                 </button>
-                                <button class="w-full flex items-center justify-between bg-slate-50 border p-4 rounded-2xl text-left" onclick="cetakLaporanMassal('penggunaan')">
-                                    <div class="flex items-center gap-3"><div class="text-lg">📅</div><div><p class="font-bold text-slate-700">Riwayat Penggunaan</p></div></div><span class="bg-white px-3 py-1.5 rounded-lg text-[10px] font-bold text-emerald-600 border">PDF</span>
+                                <button class="w-full flex items-center justify-between bg-slate-50 border p-4 rounded-2xl text-left hover:bg-slate-100" onclick="cetakLaporanMassal('penggunaan')">
+                                    <div class="flex items-center gap-3"><div class="text-lg">📅</div><div><p class="font-bold text-slate-700">Riwayat Penggunaan Lab</p></div></div><span class="bg-white px-3 py-1.5 rounded-lg text-[10px] font-bold text-emerald-600 border shadow-sm">Cetak PDF</span>
                                 </button>
-                                <button class="w-full flex items-center justify-between bg-slate-50 border p-4 rounded-2xl text-left" onclick="cetakLaporanMassal('gantirugi')">
-                                    <div class="flex items-center gap-3"><div class="text-lg">🤝</div><div><p class="font-bold text-slate-700">Ganti Rugi &amp; Tanggungan</p></div></div><span class="bg-white px-3 py-1.5 rounded-lg text-[10px] font-bold text-emerald-600 border">PDF</span>
+                                <button class="w-full flex items-center justify-between bg-slate-50 border p-4 rounded-2xl text-left hover:bg-slate-100" onclick="cetakLaporanMassal('gantirugi')">
+                                    <div class="flex items-center gap-3"><div class="text-lg">🤝</div><div><p class="font-bold text-slate-700">Ganti Rugi &amp; Tanggungan</p></div></div><span class="bg-white px-3 py-1.5 rounded-lg text-[10px] font-bold text-emerald-600 border shadow-sm">Cetak PDF</span>
+                                </button>
+                                <button class="w-full flex items-center justify-between bg-slate-50 border p-4 rounded-2xl text-left hover:bg-slate-100" onclick="cetakLaporanMassal('usulan')">
+                                    <div class="flex items-center gap-3"><div class="text-lg">💡</div><div><p class="font-bold text-slate-700">Daftar Usulan Pengadaan</p></div></div><span class="bg-white px-3 py-1.5 rounded-lg text-[10px] font-bold text-emerald-600 border shadow-sm">Cetak PDF</span>
                                 </button>
                             </div>
                         </div>
@@ -167,14 +177,14 @@
                                 <div class="space-y-3 max-h-56 overflow-y-auto custom-scroll pr-2" id="listLaporanSatuan"></div>
                             </div>
                             <div class="bg-red-50 p-6 rounded-3xl shadow-soft border border-red-100">
-                                <h3 class="text-lg font-bold text-red-900 mb-4">Monitor Ganti Rugi</h3>
+                                <h3 class="text-lg font-bold text-red-900 mb-4">Monitor Ganti Rugi Lintas Unit</h3>
                                 <div class="space-y-3 max-h-56 overflow-y-auto custom-scroll pr-2" id="listTanggungan"></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ADMIN: PENGATURAN (FITUR BARU) -->
+                <!-- ADMIN: PENGATURAN -->
                 <div class="admin-tab hidden" id="tabPengaturan">
                     <div class="bg-white p-6 md:p-8 rounded-3xl shadow-soft border max-w-2xl mx-auto">
                         <h3 class="text-xl font-bold text-slate-800 mb-2">Pengaturan Cetak Laporan</h3>
@@ -228,8 +238,8 @@
                                 <form class="space-y-4" id="formCheckout" onsubmit="submitCheckout(event)">
                                     <div class="bg-slate-50/50 p-4 rounded-2xl border space-y-4">
                                         <div class="grid grid-cols-2 gap-3">
-                                            <div><label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Mulai Tgl</label><input class="w-full border px-3 py-2 text-xs rounded-xl outline-none" id="outTglMulai" onchange="renderGuruKatalog()" required type="date"></div>
-                                            <div><label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Selesai Tgl</label><input class="w-full border px-3 py-2 text-xs rounded-xl outline-none" id="outTglSelesai" onchange="renderGuruKatalog()" required type="date"></div>
+                                            <div><label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Dari Tanggal</label><input class="w-full border px-3 py-2 text-xs rounded-xl outline-none" id="outTglMulai" onchange="renderGuruKatalog()" required type="date"></div>
+                                            <div><label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Sampai Tanggal</label><input class="w-full border px-3 py-2 text-xs rounded-xl outline-none" id="outTglSelesai" onchange="renderGuruKatalog()" required type="date"></div>
                                         </div>
                                         <div class="grid grid-cols-2 gap-3">
                                             <div><label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Jam Mulai</label><input class="w-full border px-3 py-2 text-xs rounded-xl outline-none" id="outJamMulai" required type="time"></div>
@@ -277,13 +287,10 @@
                             <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-lg shadow-inner">📅</div>
                             <div>
                                 <h3 class="text-lg font-bold text-slate-800">Kalender Praktikum (Bulan Ini)</h3>
-                                <p class="text-xs text-slate-500">Menampilkan jadwal yang telah disetujui. Periksa tabel sebelum memesan.</p>
+                                <p class="text-xs text-slate-500">Menampilkan jadwal yang telah disetujui (Rentang Waktu).</p>
                             </div>
                         </div>
-                        
-                        <!-- Area Grid Kalender (Bentuk Kotak-Kotak) -->
                         <div id="guruCalendarGrid" class="mb-6 border rounded-xl overflow-hidden shadow-sm bg-slate-50 p-2 text-sm"></div>
-
                     </div>
                 </div>
 
@@ -295,7 +302,7 @@
                             <table class="w-full text-left text-sm border-collapse">
                                 <thead>
                                     <tr class="bg-slate-50 border-b text-[10px] font-bold text-slate-500 uppercase">
-                                        <th class="p-4">Tanggal</th>
+                                        <th class="p-4">Rentang Waktu</th>
                                         <th class="p-4">Keperluan</th>
                                         <th class="p-4 text-center">Status</th>
                                         <th class="p-4 text-right">Aksi Dokumen</th>
@@ -311,7 +318,18 @@
     </main>
 
     <!-- MODALS UTILITY (Barang, Laporan, Usulan, Batal) -->
-    <!-- (KODE MODAL SAMA SEPERTI SEBELUMNYA) -->
+    <div class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[110] flex items-center justify-center px-4" id="modalBantuan">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8">
+            <h3 class="font-bold text-xl mb-1">Pusat Bantuan</h3><p class="text-xs text-slate-500 mb-6">Pilih Admin yang ingin dihubungi via WA:</p>
+            <div class="space-y-3">
+                <a class="flex items-center gap-4 bg-slate-50 hover:bg-emerald-50 p-4 rounded-2xl border" href="https://wa.me/6285156245801" target="_blank"><div class="text-2xl">👨‍💼</div><div><div class="font-bold text-sm">Pak Agni Guntur</div><div class="text-[10px] text-emerald-600 font-bold uppercase">Admin Lab MTs</div></div></a>
+                <a class="flex items-center gap-4 bg-slate-50 hover:bg-emerald-50 p-4 rounded-2xl border" href="https://wa.me/6282215155800" target="_blank"><div class="text-2xl">👨‍💼</div><div><div class="font-bold text-sm">Pak Ajang Romana</div><div class="text-[10px] text-emerald-600 font-bold uppercase">Admin Lab MA</div></div></a>
+            </div>
+            <button class="mt-6 w-full bg-slate-100 text-slate-700 py-3 rounded-xl text-sm font-bold" onclick="document.getElementById('modalBantuan').classList.add('hidden')">Tutup</button>
+        </div>
+    </div>
+
+    <!-- Modal Admin CRUD Aset -->
     <div class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center px-4 animate-fade-in" id="modalBarang">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8">
             <div class="flex justify-between mb-6"><h3 class="text-xl font-bold" id="modalTitle">Aset</h3><button class="text-slate-400 font-bold text-xl" onclick="document.getElementById('modalBarang').classList.add('hidden')">X</button></div>
@@ -332,7 +350,7 @@
                     <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Foto Fisik (Pilih Salah Satu)</label>
                     <div class="space-y-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
                         <input class="w-full border border-slate-200 p-2 text-xs rounded-lg outline-none focus:border-emerald-400" id="invUrlGambar" oninput="autoFormatDriveLink(this)" placeholder="Paste Link Google Drive di sini..." type="text">
-                        <div class="text-center text-[9px] font-bold text-slate-400 uppercase">- ATAU -</div>
+                        <div class="text-center text-[9px] font-bold text-slate-400 uppercase">- ATAU UNGGAH FILE -</div>
                         <input accept="image/*" class="w-full border border-slate-200 p-2 text-xs rounded-lg bg-white outline-none focus:border-emerald-400" id="invFileFoto" type="file">
                     </div>
                 </div>
@@ -389,25 +407,43 @@
     </div>
 
     <!-- PRINT AREA -->
-    <div class="hidden p-8 bg-white text-black font-serif" id="printArea">
-        <div class="text-center mb-6 border-b-2 border-black pb-4">
-            <h1 class="text-xl font-bold uppercase tracking-wider">Yayasan Pesantren Sabilunnajah</h1>
-            <h2 class="text-lg font-bold">Laboratorium IPA Terpadu (MTs &amp; MA)</h2>
-            <p class="text-sm mt-1" id="printSubtitle"></p>
-        </div>
-        <div class="text-sm" id="printContent"></div>
+    <div class="hidden" id="printArea">
+        <div id="printContent"></div>
     </div>
 
     <script>
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        const API_URL = "https://script.google.com/macros/s/AKfycbx02x_RpTdrE-uHABq4R38sHgphjDneeMU_kT5NphNHAdHAZ3keHUVrNvXiDI-5cnA/exec";
+        const API_URL = "URL_APPS_SCRIPT_ANDA_YANG_BARU_DISINI";
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         
         let curUser = null; 
-        let db = { inventaris: [], jadwal: [], detail: [], laporan: [], tanggungan: [], usulan: [], pengaturan: [] }; 
+        let db = { inventaris: [], jadwal: [], detail: [], laporan: [], tanggungan: [], usulan: [], pengaturan: [], akun_wa: [] }; 
         let cart = []; 
         let currentKatFilter = "Semua"; 
         let syncInterval;
+
+        // FUNGSI PERBAIKAN TANGGAL
+        function formatDateStr(dateStr) {
+            if(!dateStr) return "-";
+            try {
+                let d = new Date(dateStr);
+                if(isNaN(d.getTime())) return dateStr;
+                let months = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+                return d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear();
+            } catch(e) { return dateStr; }
+        }
+
+        // FUNGSI MENCARI NOMOR WA
+        function getWA(peminjamName) {
+            let realName = peminjamName.split(" (")[0];
+            let u = db.akun_wa.find(x => x.nama === realName);
+            if(u && u.wa) {
+                let no = u.wa.toString();
+                if(no.startsWith('0')) return '62' + no.substring(1);
+                return no;
+            }
+            return "";
+        }
 
         async function fetchAPI(payload) {
             try { 
@@ -438,7 +474,6 @@
                 document.getElementById("adminWelcome").textContent = `Otoritas: Unit ${curUser.Unit}`; 
             } else { 
                 document.getElementById("guruView").classList.remove("hidden");
-                // Tampilkan Info Jabatan di UI Guru
                 if(curUser.Jabatan) document.getElementById("guruRoleDisplay").textContent = curUser.Jabatan + " - " + curUser.Unit;
             }
         }
@@ -451,7 +486,7 @@
                 let res = await fetchAPI({action: "getAllData"});
                 if (res.status === "success") {
                     db = res.data;
-                    populatePengaturanForm(); // Isi form pengaturan admin
+                    populatePengaturanForm(); 
                     if (curUser.Role === "Admin") { 
                         renderAdminDashboard(); renderListACC(); renderLaporanAdmin(); 
                         renderTabelJadwalAktif("tabelJadwalAktifAdmin"); renderGridCalendar("adminCalendarGrid");
@@ -465,10 +500,7 @@
         }
 
         // --- SISTEM PENGATURAN (SETTINGS) ---
-        function getSetting(kunci) {
-            let s = db.pengaturan.find(p => p.Kunci === kunci);
-            return s ? s.Nilai : "Nama Belum Diatur";
-        }
+        function getSetting(kunci) { let s = db.pengaturan.find(p => p.Kunci === kunci); return s ? s.Nilai : "Nama Belum Diatur"; }
         function populatePengaturanForm() {
             if(document.getElementById("setKepalaMTs")) {
                 document.getElementById("setKepalaMTs").value = getSetting("Kepala_Lab_MTs") !== "Nama Belum Diatur" ? getSetting("Kepala_Lab_MTs") : "Agni Guntur Sugito, S.Pd";
@@ -478,29 +510,26 @@
         async function simpanPengaturan(e) {
             e.preventDefault();
             let btn = document.getElementById("btnSimpanPengaturan"); let ot = btn.textContent; btn.textContent = "Menyimpan..."; btn.disabled = true;
-            let res = await fetchAPI({ 
-                action: "simpanPengaturan", 
-                kepala_mts: document.getElementById("setKepalaMTs").value, 
-                kepala_ma: document.getElementById("setKepalaMA").value 
-            });
+            let res = await fetchAPI({ action: "simpanPengaturan", kepala_mts: document.getElementById("setKepalaMTs").value, kepala_ma: document.getElementById("setKepalaMA").value });
             alert(res.message); await loadAllDataSilently();
             btn.textContent = ot; btn.disabled = false;
         }
 
-        // --- AUTH ---
+        // --- AUTH & LUPA PASSWORD ---
         function toggleAuth(v) { document.getElementById("loginView").classList.add("hidden"); document.getElementById("registerView").classList.add("hidden"); document.getElementById(v+"View").classList.remove("hidden"); }
         
+        function lupaPassword() {
+            let msg = `Halo Admin SI-LAB, saya lupa password akun saya. Mohon bantuannya untuk mereset password.`;
+            window.open(`https://wa.me/6285156245801?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+
         async function prosesRegister(e) { 
             e.preventDefault(); 
             let btn = document.getElementById("btnRegister"); btn.textContent = "Mendaftarkan..."; btn.disabled = true; 
             let res = await fetchAPI({ 
-                action: "register", 
-                nama_lengkap: document.getElementById("regNama").value, 
-                unit: document.getElementById("regUnit").value, 
-                jabatan: document.getElementById("regJabatan").value, // Insert Jabatan
-                no_wa: document.getElementById("regWA").value, 
-                username: document.getElementById("regUser").value, 
-                password: document.getElementById("regPass").value 
+                action: "register", nama_lengkap: document.getElementById("regNama").value, unit: document.getElementById("regUnit").value, 
+                jabatan: document.getElementById("regJabatan").value, no_wa: document.getElementById("regWA").value, 
+                username: document.getElementById("regUser").value, password: document.getElementById("regPass").value 
             }); 
             alert(res.message); if(res.status === "success") { document.getElementById("formRegister").reset(); toggleAuth('login'); } 
             btn.textContent = "Buat Akun"; btn.disabled = false; 
@@ -531,45 +560,42 @@
             btnElement.classList.add('bg-emerald-50', 'text-emerald-700','active-tab'); btnElement.classList.remove('text-slate-600'); 
         }
 
-        // --- KALENDER GRID INTERAKTIF ---
+        // --- KALENDER GRID (RENTANG WAKTU) ---
         function renderGridCalendar(containerId) {
             let container = document.getElementById(containerId);
             if(!container) return;
             
             let now = new Date();
-            let currentMonth = now.getMonth();
-            let currentYear = now.getFullYear();
+            let currentMonth = now.getMonth(); let currentYear = now.getFullYear();
             let monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-            
             let daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-            let firstDayIndex = new Date(currentYear, currentMonth, 1).getDay(); // 0 is Minggu
+            let firstDayIndex = new Date(currentYear, currentMonth, 1).getDay(); 
             
-            let html = `<div class="text-center font-bold text-emerald-800 mb-2 border-b pb-2">${monthNames[currentMonth]}${currentYear}</div>`;
-            html += `<div class="grid grid-cols-7 gap-1 md:gap-2 text-center text-[10px] md:text-xs">`;
-            let days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-            days.forEach(d => html += `<div class="font-bold text-slate-500 py-1 bg-slate-100 rounded">${d}</div>`);
-            
-            // Kotak kosong awal bulan
+            let html = `<div class="text-center font-bold text-emerald-800 mb-2 border-b pb-2">${monthNames[currentMonth]}${currentYear}</div><div class="grid grid-cols-7 gap-1 md:gap-2 text-center text-[10px] md:text-xs">`;
+            ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].forEach(d => html += `<div class="font-bold text-slate-500 py-1 bg-slate-100 rounded">${d}</div>`);
             for(let i=0; i<firstDayIndex; i++) { html += `<div class="p-1 md:p-2 bg-transparent"></div>`; }
             
-            // Kotak tanggal
             for(let i=1; i<=daysInMonth; i++) {
-                let dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-                let events = db.jadwal.filter(j => j.Tgl_Mulai.startsWith(dateStr) && (j.Status_Global === 'Disetujui' || j.Status_Global === 'Menunggu Pembatalan'));
+                let loopDate = new Date(currentYear, currentMonth, i);
+                
+                let events = db.jadwal.filter(j => {
+                    if (j.Status_Global !== 'Disetujui' && j.Status_Global !== 'Menunggu Pembatalan') return false;
+                    let dStart = new Date(j.Tgl_Mulai); dStart.setHours(0,0,0,0);
+                    let dEnd = new Date(j.Tgl_Selesai); dEnd.setHours(23,59,59,999);
+                    return loopDate >= dStart && loopDate <= dEnd;
+                });
                 
                 let isToday = (i === now.getDate());
                 let todayClass = isToday ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200';
                 
                 let eventHtml = '';
                 events.forEach(e => {
-                    let isMine = (e.Peminjam.includes(curUser.Nama_Lengkap)); // Handling jabatan in string
+                    let isMine = (e.Peminjam.includes(curUser.Nama_Lengkap)); 
                     let color = isMine ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700';
                     eventHtml += `<div class="${color} text-[8px] md:text-[9px] p-1 mt-1 rounded truncate leading-tight shadow-sm" title="${e.Peminjam} - ${e.Keperluan}">${e.Peminjam.split(" ")[0]}</div>`;
                 });
                 
-                html += `<div class="border rounded-lg p-1 md:p-1.5 min-h-[60px] md:min-h-[80px] text-left overflow-hidden ${todayClass} hover:shadow-md transition-shadow">
-                            <div class="font-bold text-slate-700 text-xs ${isToday?'text-emerald-700':''}">${i}</div>${eventHtml}
-                         </div>`;
+                html += `<div class="border rounded-lg p-1 md:p-1.5 min-h-[60px] md:min-h-[80px] text-left overflow-hidden ${todayClass} hover:shadow-md transition-shadow"><div class="font-bold text-slate-700 text-xs ${isToday?'text-emerald-700':''}">${i}</div>${eventHtml}</div>`;
             }
             html += `</div>`;
             container.innerHTML = html;
@@ -578,8 +604,7 @@
         // --- DASHBOARD ADMIN ---
         function renderAdminDashboard() {
             let tbody = document.getElementById("tabelAdminInv"); tbody.innerHTML = "";
-            let searchQ = document.getElementById("searchAdminInv").value.toLowerCase(); 
-            let sortBy = document.getElementById("sortAdminInv").value;
+            let searchQ = document.getElementById("searchAdminInv").value.toLowerCase(); let sortBy = document.getElementById("sortAdminInv").value;
             let filterMilik = document.getElementById("filterMilikAdmin").value;
             
             let filtered = db.inventaris;
@@ -592,8 +617,8 @@
                 let badge = item.Kepemilikan === 'MTs' ? 'bg-blue-100 text-blue-700' : (item.Kepemilikan === 'MA' ? 'bg-purple-100 text-purple-700' : 'bg-slate-200 text-slate-700');
                 let imgTag = item.URL_Gambar ? `<img src="${item.URL_Gambar}" class="w-12 h-12 object-cover rounded-xl border shadow-sm">` : `<div class="w-12 h-12 bg-slate-100 text-[9px] flex items-center justify-center text-slate-400 rounded-xl border border-dashed">No Foto</div>`;
                 let btnAksi = `<div class="flex flex-col gap-1 items-end"><button onclick="editBarang('${item.ID_Barang}')" class="text-blue-600 hover:bg-blue-50 font-bold text-[11px] px-3 py-1 rounded">Edit</button><button onclick="hapusBarang('${item.ID_Barang}')" class="text-red-600 hover:bg-red-50 font-bold text-[11px] px-3 py-1 rounded">Hapus</button></div>`;
-                
-                tbody.innerHTML += `<tr class="border-b hover:bg-slate-50"><td class="p-4 w-20">${imgTag}</td><td class="p-4"><div class="font-bold text-sm">${item.Nama_Barang}</div><div class="text-[10px] text-slate-500 mt-1"><span class="bg-slate-100 border px-1 rounded uppercase font-bold">${item.Kategori}</span> Beli:${item.Tanggal_Beli ? item.Tanggal_Beli.substring(0,10) : '-'}</div></td><td class="p-4 text-center"><div class="font-black text-lg">${item.Stok} <span class="text-xs font-normal">${item.Satuan}</span></div><span class="px-2 py-0.5 rounded-md text-[10px] font-bold mt-1 inline-block border ${badge}">${item.Kepemilikan}</span></td><td class="p-4 text-right">${btnAksi}</td></tr>`;
+                let dFmt = formatDateStr(item.Tanggal_Beli);
+                tbody.innerHTML += `<tr class="border-b hover:bg-slate-50"><td class="p-4 w-20">${imgTag}</td><td class="p-4"><div class="font-bold text-sm">${item.Nama_Barang}</div><div class="text-[10px] text-slate-500 mt-1"><span class="bg-slate-100 border px-1 rounded uppercase font-bold">${item.Kategori}</span> Beli:${dFmt}</div></td><td class="p-4 text-center"><div class="font-black text-lg">${item.Stok} <span class="text-xs font-normal">${item.Satuan}</span></div><span class="px-2 py-0.5 rounded-md text-[10px] font-bold mt-1 inline-block border ${badge}">${item.Kepemilikan}</span></td><td class="p-4 text-right">${btnAksi}</td></tr>`;
             });
         }
 
@@ -605,7 +630,10 @@
             if(antrean.length === 0) return container.innerHTML = "<div class='col-span-full p-8 text-center bg-slate-50 border border-dashed rounded-2xl text-slate-400 font-medium'>🎉 Semua pengajuan telah direspons.</div>";
             antrean.forEach(jdwl => {
                 let pinjamAlat = db.detail.filter(d => d.ID_Jadwal === jdwl.ID_Jadwal).map(d => `${d.Nama_Barang} (x${d.Jumlah})`).join(", ");
-                container.innerHTML += `<div class="bg-white p-5 border border-slate-200 rounded-2xl flex flex-col justify-between h-full shadow-sm"><div class="mb-4"><div class="inline-block bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-md mb-2">Butuh ACC ${curUser.Unit}</div><h4 class="font-bold text-sm">${jdwl.Keperluan}</h4><div class="text-[11px] text-slate-500 mt-2"><p>🧑‍🏫 <b>${jdwl.Peminjam}</b></p><p>🕒 ${jdwl.Tgl_Mulai.substring(0,10)} (${jdwl.Jam_Mulai} -${jdwl.Jam_Selesai})</p></div><div class="text-[10px] text-slate-600 bg-slate-50 border p-2 rounded-lg mt-3 font-medium">📦 ${pinjamAlat || 'Hanya Ruangan'}</div></div><div class="flex gap-2 mt-auto pt-4 border-t"><button onclick="prosesACC('${jdwl.ID_Jadwal}', 'Disetujui')" class="flex-1 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-600 hover:text-white py-2 rounded-xl text-xs font-bold transition-all">Setujui</button><button onclick="prosesACC('${jdwl.ID_Jadwal}', 'Ditolak')" class="flex-1 bg-red-50 text-red-700 border border-red-200 hover:bg-red-600 hover:text-white py-2 rounded-xl text-xs font-bold transition-all">Tolak</button></div></div>`;
+                let waIcon = ""; let waNum = getWA(jdwl.Peminjam);
+                if(waNum) waIcon = `<a href="https://wa.me/${waNum}" target="_blank" title="Chat WA" class="text-green-500 ml-1">💬</a>`;
+
+                container.innerHTML += `<div class="bg-white p-5 border border-slate-200 rounded-2xl flex flex-col justify-between h-full shadow-sm"><div class="mb-4"><div class="inline-block bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-md mb-2">Butuh ACC ${curUser.Unit}</div><h4 class="font-bold text-sm">${jdwl.Keperluan}</h4><div class="text-[11px] text-slate-500 mt-2"><p>🧑‍🏫 <b>${jdwl.Peminjam}</b>${waIcon}</p><p>🕒 ${formatDateStr(jdwl.Tgl_Mulai)} s.d ${formatDateStr(jdwl.Tgl_Selesai)}</p><p class="mt-1">Pukul: ${jdwl.Jam_Mulai} -${jdwl.Jam_Selesai}</p></div><div class="text-[10px] text-slate-600 bg-slate-50 border p-2 rounded-lg mt-3 font-medium">📦 ${pinjamAlat || 'Hanya Ruangan'}</div></div><div class="flex gap-2 mt-auto pt-4 border-t"><button onclick="prosesACC('${jdwl.ID_Jadwal}', 'Disetujui')" class="flex-1 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-600 hover:text-white py-2 rounded-xl text-xs font-bold transition-all">Setujui</button><button onclick="prosesACC('${jdwl.ID_Jadwal}', 'Ditolak')" class="flex-1 bg-red-50 text-red-700 border border-red-200 hover:bg-red-600 hover:text-white py-2 rounded-xl text-xs font-bold transition-all">Tolak</button></div></div>`;
             });
         }
         async function prosesACC(id, status) { if(!confirm(`Beri status "${status}"?`)) return; let res = await fetchAPI({ action: "accPeminjaman", id_jadwal: id, admin_unit: curUser.Unit, keputusan: status }); if (res.status === "success") { await loadAllDataSilently(); } }
@@ -619,9 +647,18 @@
             jadwalAktif.forEach(j => {
                 let pinjamAlat = db.detail.filter(d => d.ID_Jadwal === j.ID_Jadwal).map(d => `${d.Nama_Barang}`).join(", ") || 'Hanya Ruangan';
                 let aksi = ""; let isReqCancel = j.Status_Global === "Menunggu Pembatalan";
-                if (curUser.Role === "Admin") { aksi = isReqCancel ? `<button onclick="accBatalAdmin('${j.ID_Jadwal}')" class="bg-red-500 text-white px-2 py-1 rounded text-[10px] font-bold animate-pulse">Setujui Batal</button>` : `<button onclick="bukaModalBatal('${j.ID_Jadwal}', 'Admin')" class="border border-red-200 text-red-500 hover:bg-red-50 px-2 py-1 rounded text-[10px] font-bold">Batalkan</button>`; }
+                
+                if (curUser.Role === "Admin") { 
+                    aksi = isReqCancel ? `<button onclick="accBatalAdmin('${j.ID_Jadwal}')" class="bg-red-500 text-white px-2 py-1 rounded text-[10px] font-bold animate-pulse">Setujui Batal</button>` : `<button onclick="bukaModalBatal('${j.ID_Jadwal}', 'Admin')" class="border border-red-200 text-red-500 hover:bg-red-50 px-2 py-1 rounded text-[10px] font-bold">Batalkan</button>`; 
+                    let waNum = getWA(j.Peminjam);
+                    if(waNum) {
+                        let textMsg = `Halo ${j.Peminjam.split(" (")[0]}, waktu peminjaman lab/alat Anda telah habis. Mohon segera mengembalikan alat dan mengisi laporan pasca praktikum di sistem SI-LAB.`;
+                        aksi += `<a href="https://wa.me/${waNum}?text=${encodeURIComponent(textMsg)}" target="_blank" class="bg-green-500 text-white px-2 py-1 rounded text-[10px] font-bold ml-1 mt-1 inline-block hover:bg-green-600 transition-colors">💬 Ingatkan WA</a>`;
+                    }
+                }
+                
                 let warningCancel = isReqCancel ? `<div class="mt-1 text-[9px] text-red-500 font-bold">*Dalam proses pembatalan</div>` : ``;
-                tbody.innerHTML += `<tr class="border-b bg-white hover:bg-slate-50"><td class="p-3"><div class="font-bold text-sm text-slate-800">${j.Tgl_Mulai.substring(0,10)}</div><div class="text-[10px] text-slate-500 mt-0.5">Pukul: ${j.Jam_Mulai} - ${j.Jam_Selesai}</div><div class="text-[11px] mt-2 font-medium text-emerald-700">🧑‍🏫 ${j.Peminjam}</div></td><td class="p-3"><div class="text-xs font-bold text-slate-700 mb-1">${j.Keperluan}</div><div class="text-[10px] text-slate-500 bg-slate-50 p-1.5 border rounded">📦 ${pinjamAlat}</div>${warningCancel}</td><td class="p-3 text-right align-middle">${aksi}</td></tr>`;
+                tbody.innerHTML += `<tr class="border-b bg-white hover:bg-slate-50"><td class="p-3"><div class="font-bold text-sm text-slate-800">${formatDateStr(j.Tgl_Mulai)}<br><span class="text-[10px] font-normal text-slate-500">s.d ${formatDateStr(j.Tgl_Selesai)}</span></div><div class="text-[10px] text-slate-500 mt-0.5">Pukul: ${j.Jam_Mulai} - ${j.Jam_Selesai}</div><div class="text-[11px] mt-2 font-medium text-emerald-700">🧑‍🏫 ${j.Peminjam.split(" (")[0]}</div></td><td class="p-3"><div class="text-xs font-bold text-slate-700 mb-1">${j.Keperluan}</div><div class="text-[10px] text-slate-500 bg-slate-50 p-1.5 border rounded">📦 ${pinjamAlat}</div>${warningCancel}</td><td class="p-3 text-right align-middle">${aksi}</td></tr>`;
             });
         }
 
@@ -634,29 +671,29 @@
             if(db.laporan.length === 0) contL.innerHTML = "<p class='text-xs text-slate-400'>Belum ada laporan masuk.</p>";
             db.laporan.slice().reverse().forEach(l => {
                 let badgeIns = l.Insiden_Kecelakaan !== "Tidak Ada" ? `<span class="text-[9px] bg-red-100 text-red-600 px-1 rounded font-bold uppercase ml-1">Insiden</span>` : '';
-                contL.innerHTML += `<div class="bg-white p-3 rounded-xl shadow-sm border mb-2 flex justify-between items-center"><div><div class="text-xs font-bold text-slate-800">${l.Peminjam.split(" ")[0]} ${badgeIns}</div><div class="text-[10px] text-slate-500 mt-1">${l.Tanggal_Lapor}</div></div><button onclick="cetakLaporanSatuan('${l.ID_Laporan}')" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white border px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors">🖨️️ Cetak</button></div>`;
+                let tglFormat = formatDateStr(l.Tanggal_Lapor); // Fix bug ISO Date
+                contL.innerHTML += `<div class="bg-white p-3 rounded-xl shadow-sm border mb-2 flex justify-between items-center"><div><div class="text-xs font-bold text-slate-800">${l.Peminjam.split(" (")[0]} ${badgeIns}</div><div class="text-[10px] text-slate-500 mt-1">${tglFormat}</div></div><button onclick="cetakLaporanSatuan('${l.ID_Laporan}')" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white border px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors">🖨️ Cetak</button></div>`;
             });
             
-            // TANGGUNGAN DENGAN TOMBOL LUNAS
             let contH = document.getElementById("listTanggungan"); contH.innerHTML = "";
             let hasTanggungan = false;
             db.tanggungan.forEach(t => { 
                 if(t.Status_GantiRugi === "Belum Diganti") {
                     hasTanggungan = true;
                     let btnLunas = (curUser.Unit === t.Memakai_Milik || t.Memakai_Milik === "Bersama") 
-                        ? `<button onclick="lunasiTanggungan('${t.ID_Tanggungan}')" class="mt-3 w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-xl text-[10px] font-bold shadow-sm transition-all">✅ Konfirmasi Lunas & Restock</button>`
-                        : `<div class="mt-3 text-[10px] text-amber-600 font-bold bg-amber-50 p-2 rounded-xl text-center border border-amber-100">Menunggu konfirmasi Admin ${t.Memakai_Milik}</div>`;
-                    contH.innerHTML += `<div class="bg-white border-l-4 border-red-500 p-4 rounded-2xl shadow-sm text-xs mb-3 transition-transform hover:-translate-y-1"><div class="flex justify-between items-start mb-1"><span class="font-bold text-slate-800">${t.Peminjam.split(" ")[0]} (${t.Unit_Peminjam})</span><span class="text-[9px] text-slate-400">${t.Tanggal}</span></div><div>Berhutang <span class="font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded">${t.Jumlah_Rusak_Habis} unit ${t.Nama_Barang}</span> kepada <b>${t.Memakai_Milik}</b>.</div>${btnLunas}</div>`; 
+                        ? `<button onclick="lunasiTanggungan('${t.ID_Tanggungan}')" class="mt-3 w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-xl text-[10px] font-bold shadow-sm transition-all">✅ Lunas & Restock</button>`
+                        : `<div class="mt-3 text-[10px] text-amber-600 font-bold bg-amber-50 p-2 rounded-xl text-center border border-amber-100">Menunggu Admin ${t.Memakai_Milik}</div>`;
+                    let dFmt = formatDateStr(t.Tanggal);
+                    contH.innerHTML += `<div class="bg-white border-l-4 border-red-500 p-4 rounded-2xl shadow-sm text-xs mb-3 transition-transform hover:-translate-y-1"><div class="flex justify-between items-start mb-1"><span class="font-bold text-slate-800">${t.Peminjam.split(" ")[0]} (${t.Unit_Peminjam})</span><span class="text-[9px] text-slate-400">${dFmt}</span></div><div>Berhutang <span class="font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded">${t.Jumlah_Rusak_Habis} unit ${t.Nama_Barang}</span> ke <b>${t.Memakai_Milik}</b>.</div>${btnLunas}</div>`; 
                 } 
             });
-            if(!hasTanggungan) contH.innerHTML = `<div class="p-6 bg-emerald-50/50 border border-emerald-100 rounded-2xl text-center"><span class="text-2xl block mb-2">🎉</span><p class="text-xs text-emerald-700 font-bold">Luar biasa! Tidak ada tanggungan aktif saat ini.</p></div>`;
+            if(!hasTanggungan) contH.innerHTML = `<div class="p-6 bg-emerald-50/50 border border-emerald-100 rounded-2xl text-center"><span class="text-2xl block mb-2">🎉</span><p class="text-xs text-emerald-700 font-bold">Tidak ada tanggungan aktif saat ini.</p></div>`;
         }
 
         async function lunasiTanggungan(id_tanggungan) {
-            if(!confirm("Yakin barang sudah diganti? Stok akan otomatis dikembalikan ke dalam Inventaris!")) return;
+            if(!confirm("Yakin barang sudah diganti? Stok akan otomatis dikembalikan ke Inventaris!")) return;
             let res = await fetchAPI({ action: "selesaikanTanggungan", id_tanggungan: id_tanggungan });
-            alert(res.message); 
-            if(res.status === "success") await loadAllDataSilently();
+            alert(res.message); if(res.status === "success") await loadAllDataSilently();
         }
 
         // --- SISTEM CRUD INVENTARIS ---
@@ -690,60 +727,121 @@
         function toBase64(file) { return new Promise((resolve, reject) => { let reader = new FileReader(); reader.readAsDataURL(file); reader.onload = () => resolve(reader.result.split(',')[1]); reader.onerror = error => reject(error); }); }
         async function hapusBarang(id) { if(!confirm("Hapus aset secara permanen?")) return; let res = await fetchAPI({ action: "hapusBarang", id_barang: id }); if(res.status === "success") await loadAllDataSilently(); }
 
-        // --- SISTEM CETAK ---
+        // --- SISTEM CETAK PROFESIONAL ---
         function executePrint(htmlBodyContent) {
-            let printWindow = window.open('', '_blank', 'height=600,width=800');
-            printWindow.document.write('<html><head><title>Cetak Dokumen Resmi</title><style>body { font-family: "Times New Roman", serif; padding: 20px; color: #000; } table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 25px; } th, td { border: 1px solid black; padding: 8px; font-size: 13px; } th { background-color: #f8f9fa; }</style></head><body><div style="text-align:center; border-bottom: 3px double black; padding-bottom: 15px; margin-bottom: 25px;"><h2 style="margin:0; text-transform:uppercase; font-size:22px;">Yayasan Pesantren Sabilunnajah</h2><h3 style="margin:5px 0; font-weight:normal;">Laboratorium IPA Terpadu (MTs &amp; MA)</h3></div>' + htmlBodyContent + '</body></html>');
+            let printWindow = window.open('', '_blank', 'height=800,width=800');
+            // CSS CETAK PROFESIONAL
+            let cssPrint = `
+                <style>
+                    body { font-family: 'Times New Roman', Times, serif; padding: 20px; color: #000; line-height: 1.5; font-size: 12px;}
+                    .kop-surat { text-align: center; border-bottom: 4px double #000; padding-bottom: 10px; margin-bottom: 20px; }
+                    .kop-surat h1 { margin: 0; font-size: 22px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
+                    .kop-surat h2 { margin: 5px 0 0 0; font-size: 16px; font-weight: normal; }
+                    .kop-surat p { margin: 5px 0 0 0; font-size: 12px; font-style: italic; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 25px; font-size: 12px; }
+                    th, td { border: 1px solid #000; padding: 6px 8px; text-align: left; vertical-align: top; }
+                    th { background-color: #f2f2f2; font-weight: bold; text-align: center; text-transform: uppercase; }
+                    .text-center { text-align: center; }
+                    .ttd-container { width: 100%; margin-top: 40px; page-break-inside: avoid; border: none !important; }
+                    .ttd-table { width: 100%; border: none !important; }
+                    .ttd-table td { border: none !important; text-align: center; width: 50%; vertical-align: bottom; height: 100px; padding: 0;}
+                    .ttd-name { font-weight: bold; text-decoration: underline; }
+                </style>`;
+            
+            let kopSurat = `
+                <div class="kop-surat">
+                    <h1>Yayasan Pesantren Sabilunnajah</h1>
+                    <h2>Laboratorium IPA Terpadu (MTs &amp; MA)</h2>
+                    <p>Jl. Sindangreret No.12, Kec. Cilengkrang, Kabupaten Bandung, Jawa Barat</p>
+                </div>`;
+
+            printWindow.document.write('<html><head><title>Cetak Dokumen Resmi</title>' + cssPrint + '</head><body>' + kopSurat + htmlBodyContent + '</body></html>');
             printWindow.document.close(); printWindow.focus(); setTimeout(() => { printWindow.print(); printWindow.close(); }, 1200);
         }
 
-        // TTD Menggunakan Pengaturan Dinamis
-        function getTTDHtml() {
+        function getTTDHtml(peminjam = null) {
             let k_mts = getSetting("Kepala_Lab_MTs"); let k_ma = getSetting("Kepala_Lab_MA");
-            let dateStr = new Date().toLocaleDateString('id-ID');
-            return `<br><table style="border:none !important;"><tr style="border:none !important;"><td style="border:none !important; width:50%; text-align:center;">Otoritas Lab MTs<br><br><br><br><br><b>${k_mts}</b></td><td style="border:none !important; width:50%; text-align:center;">Otoritas Lab MA<br><br><br><br><br><b>${k_ma}</b></td></tr></table>`;
+            let dateStr = formatDateStr(new Date().toISOString());
+            
+            if(peminjam) {
+                return `<table class="ttd-table"><tr>
+                        <td>Pelapor / Praktikan<br><br><br><br><br><span class="ttd-name">${peminjam.split(" (")[0]}</span></td>
+                        <td>Mengetahui,<br>Administrator Laboratorium<br><br><br><br><br><span class="ttd-name">${curUser.Role === 'Admin' ? curUser.Nama_Lengkap : k_mts}</span></td>
+                    </tr></table>`;
+            }
+            return `<div style="text-align:right; margin-bottom:10px;">Bandung, ${dateStr}</div>
+                    <table class="ttd-table"><tr>
+                        <td>Kepala Laboratorium MTs<br><br><br><br><br><span class="ttd-name">${k_mts}</span></td>
+                        <td>Kepala Laboratorium MA<br><br><br><br><br><span class="ttd-name">${k_ma}</span></td>
+                    </tr></table>`;
         }
 
         function cetakLaporanMassal(jenis) {
             let html = ""; let subtitle = ""; 
             if(jenis === 'inventaris') {
-                subtitle = "<h4>LAPORAN REKAPITULASI INVENTARIS ASET</h4>";
+                subtitle = "<h3 class='text-center'>LAPORAN REKAPITULASI INVENTARIS ASET</h3>";
                 html = `<table><thead><tr><th>No</th><th>Nama Barang</th><th>Kategori</th><th>Milik</th><th>Stok</th><th>Kondisi</th><th>Tgl Beli</th></tr></thead><tbody>`;
-                db.inventaris.forEach((i, idx) => { html += `<tr><td style="text-align:center;">${idx+1}</td><td>${i.Nama_Barang}</td><td style="text-align:center;">${i.Kategori}</td><td style="text-align:center;">${i.Kepemilikan}</td><td style="text-align:center;">${i.Stok} ${i.Satuan}</td><td style="text-align:center;">${i.Kondisi}</td><td style="text-align:center;">${i.Tanggal_Beli ? i.Tanggal_Beli.substring(0,10) : '-'}</td></tr>`; });
+                db.inventaris.forEach((i, idx) => { html += `<tr><td class="text-center">${idx+1}</td><td>${i.Nama_Barang}</td><td class="text-center">${i.Kategori}</td><td class="text-center">${i.Kepemilikan}</td><td class="text-center">${i.Stok} ${i.Satuan}</td><td class="text-center">${i.Kondisi}</td><td class="text-center">${formatDateStr(i.Tanggal_Beli)}</td></tr>`; });
                 html += `</tbody></table>`;
             } else if(jenis === 'penggunaan') {
-                subtitle = "<h4>LAPORAN RIWAYAT PENGGUNAAN FASILITAS</h4>";
-                html = `<table><thead><tr><th>Tanggal</th><th>Peminjam (Unit)</th><th>Keperluan</th><th>Status Akhir</th></tr></thead><tbody>`;
-                db.jadwal.forEach(j => { html += `<tr><td>${j.Tgl_Mulai.substring(0,10)}</td><td>${j.Peminjam}</td><td>${j.Keperluan}</td><td style="text-align:center;">${j.Status_Global}</td></tr>`; });
+                subtitle = "<h3 class='text-center'>LAPORAN RIWAYAT PENGGUNAAN FASILITAS</h3>";
+                html = `<table><thead><tr><th>Tanggal Mulai</th><th>Peminjam (Jabatan)</th><th>Keperluan</th><th>Status Akhir</th></tr></thead><tbody>`;
+                db.jadwal.forEach(j => { html += `<tr><td>${formatDateStr(j.Tgl_Mulai)}</td><td>${j.Peminjam}</td><td>${j.Keperluan}</td><td class="text-center">${j.Status_Global}</td></tr>`; });
                 html += `</tbody></table>`;
             } else if(jenis === 'gantirugi') {
-                subtitle = "<h4>LAPORAN TANGGUNGAN &amp; GANTI RUGI</h4>";
-                html = `<table><thead><tr><th>Tanggal</th><th>Peminjam (Unit)</th><th>Memakai Milik</th><th>Nama Aset</th><th>Jml Diganti</th><th>Status</th></tr></thead><tbody>`;
-                db.tanggungan.forEach(t => { html += `<tr><td>${t.Tanggal}</td><td>${t.Peminjam} (${t.Unit_Peminjam})</td><td style="text-align:center;">${t.Memakai_Milik}</td><td>${t.Nama_Barang}</td><td style="text-align:center; font-weight:bold;">${t.Jumlah_Rusak_Habis}</td><td style="text-align:center;">${t.Status_GantiRugi}</td></tr>`; });
+                subtitle = "<h3 class='text-center'>LAPORAN TANGGUNGAN &amp; GANTI RUGI</h3>";
+                html = `<table><thead><tr><th>Tanggal Kejadian</th><th>Peminjam (Unit)</th><th>Pemilik Aset</th><th>Nama Aset</th><th>Jumlah Tanggungan</th><th>Status Lunas</th></tr></thead><tbody>`;
+                db.tanggungan.forEach(t => { html += `<tr><td>${formatDateStr(t.Tanggal)}</td><td>${t.Peminjam} (${t.Unit_Peminjam})</td><td class="text-center">${t.Memakai_Milik}</td><td>${t.Nama_Barang}</td><td class="text-center"><b>${t.Jumlah_Rusak_Habis}</b></td><td class="text-center">${t.Status_GantiRugi}</td></tr>`; });
                 html += `</tbody></table>`;
             } else if(jenis === 'usulan') {
-                subtitle = "<h4>DAFTAR USULAN PENGADAAN ITEM BARU DARI GURU</h4>";
-                html = `<table><thead><tr><th>Tanggal</th><th>Pengusul (Unit)</th><th>Kategori</th><th>Nama Item</th><th>Jml</th><th>Fungsi/Alasan</th></tr></thead><tbody>`;
-                if(!db.usulan || db.usulan.length === 0) html += `<tr><td colspan="6" style="text-align:center;">Belum ada usulan.</td></tr>`;
-                else db.usulan.forEach(u => { html += `<tr><td>${u.Tanggal}</td><td>${u.Pengusul} (${u.Unit_Pengusul})</td><td style="text-align:center;">${u.Kategori}</td><td>${u.Nama_Item}</td><td style="text-align:center;">${u.Jumlah}</td><td>${u.Fungsi_Alasan}</td></tr>`; });
+                subtitle = "<h3 class='text-center'>DAFTAR USULAN PENGADAAN ITEM BARU DARI GURU</h3>";
+                html = `<table><thead><tr><th>Tanggal Usul</th><th>Pengusul (Unit)</th><th>Kategori</th><th>Nama Item</th><th>Jml</th><th>Fungsi/Alasan</th></tr></thead><tbody>`;
+                if(!db.usulan || db.usulan.length === 0) html += `<tr><td colspan="6" class="text-center">Belum ada usulan.</td></tr>`;
+                else db.usulan.forEach(u => { html += `<tr><td>${formatDateStr(u.Tanggal)}</td><td>${u.Pengusul} (${u.Unit_Pengusul})</td><td class="text-center">${u.Kategori}</td><td>${u.Nama_Item}</td><td class="text-center">${u.Jumlah}</td><td>${u.Fungsi_Alasan}</td></tr>`; });
                 html += `</tbody></table>`;
             }
-            html += subtitle + getTTDHtml(); executePrint(html);
+            html = subtitle + html + getTTDHtml(); executePrint(html);
         }
 
         function cetakLaporanSatuan(idLapor) {
             let lapor = db.laporan.find(l => l.ID_Laporan === idLapor); if(!lapor) return;
             let jdwl = db.jadwal.find(j => j.ID_Jadwal === lapor.ID_Jadwal);
             let imgHtml = "";
-            if (lapor.URL_Foto_Bukti) { let urls = lapor.URL_Foto_Bukti.split(","); urls.forEach(u => { imgHtml += `<img src="${u.trim()}" style="width:250px; height:250px; object-fit:cover; margin:10px; border:1px solid #ccc; display:inline-block;"/>`; }); } else { imgHtml = "<i>(Tidak ada foto bukti terlampir)</i>"; }
-            let html = `<h4 style="text-align:center; text-decoration:underline;">DOKUMEN LAPORAN PASCA PRAKTIKUM</h4><table><tr><td style="width:150px; border:none; padding:4px;"><b>Tanggal Lapor</b></td><td style="border:none; padding:4px;">: ${lapor.Tanggal_Lapor}</td></tr><tr><td style="border:none; padding:4px;"><b>Nama Pelapor</b></td><td style="border:none; padding:4px;">: ${lapor.Peminjam}</td></tr><tr><td style="border:none; padding:4px;"><b>Jadwal Referensi</b></td><td style="border:none; padding:4px;">: ${jdwl ? jdwl.Keperluan : '-'}</td></tr></table><p><b>Evaluasi / Kondisi Akhir:</b><br/>${lapor.Kondisi_Bahan_Alat}</p><p><b>Laporan Insiden/Kecelakaan:</b><br/><span style="color:red; font-weight:bold;">${lapor.Insiden_Kecelakaan}</span> - Kronologi: ${lapor.Kronologi_Insiden || 'N/A'}</p><p><b>Lampiran Bukti Foto Fisik:</b></p><div style="text-align:center;">${imgHtml}</div>` + getTTDHtml();
+            if (lapor.URL_Foto_Bukti) {
+                let urls = lapor.URL_Foto_Bukti.split(",");
+                urls.forEach(u => { imgHtml += `<img src="${u.trim()}" style="width:200px; height:200px; object-fit:cover; margin:10px; border:1px solid #ccc; display:inline-block;"/>`; });
+            } else { imgHtml = "<i>(Tidak ada lampiran foto bukti)</i>"; }
+
+            let html = `<h3 style="text-align:center; text-decoration:underline; margin-bottom:20px;">DOKUMEN LAPORAN PASCA PRAKTIKUM</h3>
+            <table style="border:none;">
+                <tr><td style="width:150px; border:none; padding:4px;"><b>Tanggal Lapor</b></td><td style="border:none; padding:4px;">: ${formatDateStr(lapor.Tanggal_Lapor)}</td></tr>
+                <tr><td style="border:none; padding:4px;"><b>Nama Pelapor</b></td><td style="border:none; padding:4px;">: ${lapor.Peminjam}</td></tr>
+                <tr><td style="border:none; padding:4px;"><b>Jadwal Referensi</b></td><td style="border:none; padding:4px;">: ${jdwl ? jdwl.Keperluan : '-'}</td></tr>
+            </table>
+            <p style="margin-top:15px;"><b>Evaluasi / Kondisi Akhir Fasilitas:</b><br/>${lapor.Kondisi_Bahan_Alat}</p>
+            <p><b>Laporan Insiden / Kecelakaan Kerja:</b><br/><span style="color:red; font-weight:bold;">${lapor.Insiden_Kecelakaan}</span> - Kronologi: ${lapor.Kronologi_Insiden || 'Tidak ada kejadian menonjol'}</p>
+            <p><b>Lampiran Bukti Foto Fisik:</b></p>
+            <div style="text-align:center;">${imgHtml}</div>` + getTTDHtml(lapor.Peminjam);
             executePrint(html);
         }
 
         function cetakBuktiPerizinan(idJadwal) {
             let jdwl = db.jadwal.find(j => j.ID_Jadwal === idJadwal); if(!jdwl) return alert("Data tidak ditemukan.");
-            let det = db.detail.filter(d => d.ID_Jadwal === idJadwal); let listStr = det.map(d => `<li>${d.Nama_Barang} - Jumlah: <b>${d.Jumlah}</b> (${d.Kepemilikan})</li>`).join("");
-            let html = `<h3 style="text-align:center; text-decoration:underline; font-size:18px;">SURAT BUKTI OTORISASI LABORATORIUM</h3><p>Diterangkan bahwa pemohon di bawah ini telah mendapat izin resmi sistem:</p><table><tr><td style="width:150px; border:none; padding:4px;"><b>Nama Peminjam</b></td><td style="border:none; padding:4px;">: ${jdwl.Peminjam}</td></tr><tr><td style="border:none; padding:4px;"><b>Tanggal Praktikum</b></td><td style="border:none; padding:4px;">: ${jdwl.Tgl_Mulai.substring(0,10)} s/d ${jdwl.Tgl_Selesai.substring(0,10)}</td></tr><tr><td style="border:none; padding:4px;"><b>Waktu / Jam</b></td><td style="border:none; padding:4px;">: ${jdwl.Jam_Mulai} - ${jdwl.Jam_Selesai}</td></tr><tr><td style="border:none; padding:4px;"><b>Materi/Keperluan</b></td><td style="border:none; padding:4px;">: ${jdwl.Keperluan}</td></tr><tr><td style="border:none; padding:4px;"><b>Status Sistem</b></td><td style="border:none; padding:4px;">: <b style="background-color:#e8f5e9; padding:2px 6px; border-radius:4px;">${jdwl.Status_Global}</b></td></tr></table><p style="margin-top:20px;"><b>Daftar Instrumen / Fasilitas Tersertifikasi:</b></p><ul>${listStr}</ul><p style="font-size:11px; color:#555; font-style:italic;">Dokumen ini dicetak secara otomatis dari SI-LAB Sabilunnajah dan sah digunakan sebagai tiket masuk laboratorium.</p>` + getTTDHtml();
+            let det = db.detail.filter(d => d.ID_Jadwal === idJadwal); 
+            let listStr = det.map(d => `<li>${d.Nama_Barang} - Jumlah: <b>${d.Jumlah}</b> (${d.Kepemilikan})</li>`).join("");
+            
+            let html = `<h3 style="text-align:center; text-decoration:underline; font-size:16px;">SURAT BUKTI OTORISASI LABORATORIUM</h3>
+            <p>Diterangkan bahwa pemohon di bawah ini telah mendapat izin resmi dari sistem:</p>
+            <table style="border:none;">
+                <tr><td style="width:150px; border:none; padding:4px;"><b>Nama Peminjam</b></td><td style="border:none; padding:4px;">: ${jdwl.Peminjam} (${jdwl.Unit})</td></tr>
+                <tr><td style="border:none; padding:4px;"><b>Rentang Tanggal</b></td><td style="border:none; padding:4px;">: ${formatDateStr(jdwl.Tgl_Mulai)} s/d ${formatDateStr(jdwl.Tgl_Selesai)}</td></tr>
+                <tr><td style="border:none; padding:4px;"><b>Waktu / Jam</b></td><td style="border:none; padding:4px;">: ${jdwl.Jam_Mulai} - ${jdwl.Jam_Selesai}</td></tr>
+                <tr><td style="border:none; padding:4px;"><b>Materi/Keperluan</b></td><td style="border:none; padding:4px;">: ${jdwl.Keperluan}</td></tr>
+                <tr><td style="border:none; padding:4px;"><b>Status Sistem</b></td><td style="border:none; padding:4px;">: <b>${jdwl.Status_Global}</b></td></tr>
+            </table>
+            <p style="margin-top:20px; font-weight:bold;">Daftar Instrumen / Fasilitas Tersertifikasi:</p>
+            <ul>${listStr}</ul>
+            <p style="font-size:11px; color:#555; font-style:italic;">Dokumen ini dicetak otomatis dari SI-LAB Sabilunnajah dan sah digunakan sebagai tiket masuk laboratorium.</p>` + getTTDHtml(jdwl.Peminjam);
             executePrint(html);
         }
 
@@ -778,16 +876,21 @@
         function getStokTersedia(idBarang, tglM, tglS) {
             let item = db.inventaris.find(i => i.ID_Barang === idBarang); if(!item) return 0;
             let maxStok = parseInt(item.Stok); if(!tglM || !tglS) return maxStok;
-            let start1 = new Date(tglM).getTime(); let end1 = new Date(tglS).getTime(); let dipakai = 0;
+            
+            let start1 = new Date(tglM); start1.setHours(0,0,0,0);
+            let end1 = new Date(tglS); end1.setHours(23,59,59,999);
+            let dipakai = 0;
+            
             db.jadwal.forEach(j => {
                 if(j.Status_Global === 'Ditolak' || j.Status_Global === 'Selesai (Sudah Lapor)' || j.Status_Global === 'Dibatalkan') return;
-                let start2 = new Date(j.Tgl_Mulai).getTime(); let end2 = new Date(j.Tgl_Selesai).getTime();
+                let start2 = new Date(j.Tgl_Mulai); start2.setHours(0,0,0,0);
+                let end2 = new Date(j.Tgl_Selesai); end2.setHours(23,59,59,999);
                 if(start1 <= end2 && start2 <= end1) { db.detail.filter(d => d.ID_Jadwal === j.ID_Jadwal && d.ID_Barang === idBarang).forEach(d => { dipakai += parseInt(d.Jumlah); }); }
             });
             return Math.max(0, maxStok - dipakai);
         }
 
-        // KENDALI KERANJANG (PLUS/MINUS/KETIK)
+        // KENDALI KERANJANG
         function addToCart(id, nama, milik, kat, max) { let ex = cart.find(c => c.id_barang === id); if(ex) { if(ex.jumlah < max) ex.jumlah += 1; else alert("Maksimal stok tercapai!"); } else { cart.push({ id_barang: id, nama_barang: nama, kepemilikan: milik, kategori: kat, jumlah: 1, max_stok: max }); } renderCart(); }
         function updateCartQty(id, newVal, max) { let ex = cart.find(c => c.id_barang === id); if(ex) { let v = parseInt(newVal); if(isNaN(v) || v < 1) v = 1; if(v > max) { alert("Melebihi stok (" + max + ")."); v = max; } ex.jumlah = v; renderCart(); } }
         function changeCartQty(id, delta) { let ex = cart.find(c => c.id_barang === id); if(ex) { let v = ex.jumlah + delta; if(v < 1) v = 1; if(v > ex.max_stok) v = ex.max_stok; ex.jumlah = v; renderCart(); } }
@@ -799,11 +902,24 @@
             cart.forEach(item => { list.innerHTML += `<li class="bg-white border p-2.5 rounded-xl text-xs shadow-sm"><div class="font-bold truncate mb-2">${item.nama_barang} <span class="text-[9px] text-emerald-600 font-normal bg-emerald-50 px-1 rounded">Maks: ${item.max_stok}</span></div><div class="flex justify-between items-center"><div class="flex items-center gap-1 border rounded-lg bg-slate-50"><button type="button" onclick="changeCartQty('${item.id_barang}', -1)" class="px-2 py-1 text-slate-600 font-bold hover:bg-slate-200 rounded-l-lg">-</button><input type="number" min="1" max="${item.max_stok}" value="${item.jumlah}" onchange="updateCartQty('${item.id_barang}', this.value, ${item.max_stok})" class="w-10 text-center text-xs bg-white outline-none font-bold"><button type="button" onclick="changeCartQty('${item.id_barang}', 1)" class="px-2 py-1 text-slate-600 font-bold hover:bg-slate-200 rounded-r-lg">+</button></div><button type="button" onclick="removeCart('${item.id_barang}')" class="text-red-500 bg-red-50 px-2 py-1.5 rounded-lg font-bold">Hapus</button></div></li>`; }); 
         }
 
-        async function submitCheckout(e) { e.preventDefault(); let btn = document.getElementById("btnCheckout"); let ot = btn.textContent; btn.textContent = "Mengirim via Server..."; btn.disabled = true; let res = await fetchAPI({ action: "ajukanPeminjaman", peminjam: curUser.Nama_Lengkap, unit: curUser.Unit, jabatan: curUser.Jabatan, tglMulai: document.getElementById("outTglMulai").value, tglSelesai: document.getElementById("outTglSelesai").value, jamMulai: document.getElementById("outJamMulai").value, jamSelesai: document.getElementById("outJamSelesai").value, keperluan: document.getElementById("outKeperluan").value, cart: cart }); alert(res.message); if(res.status === "success") { document.getElementById("formCheckout").reset(); cart = []; renderCart(); await loadAllDataSilently(); } btn.textContent = ot; btn.disabled = false; }
+        async function submitCheckout(e) { 
+            e.preventDefault(); 
+            let btn = document.getElementById("btnCheckout"); let ot = btn.textContent; btn.textContent = "Mengirim..."; btn.disabled = true; 
+            let res = await fetchAPI({ action: "ajukanPeminjaman", peminjam: curUser.Nama_Lengkap, unit: curUser.Unit, jabatan: curUser.Jabatan, tglMulai: document.getElementById("outTglMulai").value, tglSelesai: document.getElementById("outTglSelesai").value, jamMulai: document.getElementById("outJamMulai").value, jamSelesai: document.getElementById("outJamSelesai").value, keperluan: document.getElementById("outKeperluan").value, cart: cart }); 
+            alert(res.message); 
+            if(res.status === "success") { 
+                document.getElementById("formCheckout").reset(); cart = []; renderCart(); await loadAllDataSilently(); 
+                
+                // AUTO WA PENGINGAT KE ADMIN SAAT KLIK KIRIM
+                let adminWA = curUser.Unit === 'MTs' ? '6285156245801' : '6282215155800';
+                let txtWA = `Halo Admin Lab ${curUser.Unit}, saya ${curUser.Nama_Lengkap} telah mengajukan peminjaman lab/alat via aplikasi SI-LAB. Mohon segera dicek dan disetujui. Terima kasih.`;
+                window.open(`https://wa.me/${adminWA}?text=${encodeURIComponent(txtWA)}`, '_blank');
+            } 
+            btn.textContent = ot; btn.disabled = false; 
+        }
 
         function renderRiwayatGuru() { 
             let list = document.getElementById("riwayatGuruList"); list.innerHTML = ""; 
-            // Filter by ID Peminjam - karena sekarang ada jabatan di string peminjam
             let myJadwal = db.jadwal.filter(j => j.Peminjam.includes(curUser.Nama_Lengkap)).reverse(); 
             if(myJadwal.length === 0) return list.innerHTML = "<tr><td colspan='4' class='p-8 text-center text-slate-400'>Tidak ada histori jadwal.</td></tr>"; 
             
@@ -817,11 +933,12 @@
                     btnAksi = `<button onclick="bukaModalBatal('${j.ID_Jadwal}', 'Guru')" class="border border-red-200 text-red-500 hover:bg-red-50 text-[10px] font-bold px-3 py-1.5 rounded-lg w-full text-center">Batal / Revisi</button>`;
                 } else { btnAksi = `<span class="text-[10px] text-slate-400 font-medium">Selesai/Batal</span>`; }
                 
-                list.innerHTML += `<tr class="border-b border-slate-50"><td class="p-4 align-top text-xs font-bold text-slate-700">${j.Tgl_Mulai.substring(0,10)}<div class="font-normal text-[10px] text-slate-500 mt-1">${j.Jam_Mulai} - ${j.Jam_Selesai}</div></td><td class="p-4 align-top text-xs text-slate-600">${j.Keperluan}${infoBatal}</td><td class="p-4 align-top text-center"><span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${bG}">${j.Status_Global}</span></td><td class="p-4 align-top text-right w-32">${btnAksi}</td></tr>`; 
+                let dFmtMulai = formatDateStr(j.Tgl_Mulai); let dFmtSelesai = formatDateStr(j.Tgl_Selesai);
+                list.innerHTML += `<tr class="border-b border-slate-50"><td class="p-4 align-top text-xs font-bold text-slate-700">${dFmtMulai}<br><span class="text-[10px] font-normal text-slate-500">s.d ${dFmtSelesai}</span><div class="font-normal text-[10px] text-slate-500 mt-1">${j.Jam_Mulai} - ${j.Jam_Selesai}</div></td><td class="p-4 align-top text-xs text-slate-600">${j.Keperluan}${infoBatal}</td><td class="p-4 align-top text-center"><span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${bG}">${j.Status_Global}</span></td><td class="p-4 align-top text-right w-32">${btnAksi}</td></tr>`; 
             }); 
         }
 
-        // --- SISTEM LAPORAN GURU (MULTI FOTO) ---
+        // --- SISTEM LAPORAN GURU ---
         function bukaModalLaporan(id) { document.getElementById("lapJadwalID").value = id; let det = db.detail.filter(d => d.ID_Jadwal === id); let html = ""; det.forEach(d => { if(d.Kategori !== "Ruangan") html += `<div class="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-100 shadow-sm mb-2"><div class="text-[11px] font-bold text-slate-700">${d.Nama_Barang} <span class="bg-slate-100 text-slate-500 px-1 rounded ml-1">Pinjam: ${d.Jumlah}</span></div><input type="number" min="0" max="${d.Jumlah}" value="0" class="border border-slate-200 rounded-lg w-16 p-1.5 text-xs text-center item-lapor-qty outline-none focus:border-amber-500" data-id="${d.ID_Barang}"></div>`; }); document.getElementById("lapListBarang").innerHTML = html || "<div class='text-xs text-slate-400 p-2'>Tidak ada instrumen fisik yang dipinjam.</div>"; document.getElementById("modalLaporan").classList.remove("hidden"); }
         async function submitLaporan(e) { e.preventDefault(); let terpakai = []; let btn = document.getElementById("btnSubmitLaporan"); let ot = btn.textContent; btn.textContent = "Upload Data..."; btn.disabled = true; document.querySelectorAll(".item-lapor-qty").forEach(input => { if(parseInt(input.value) > 0) terpakai.push({ id_barang: input.getAttribute("data-id"), qty_hilang_habis: parseInt(input.value) }); }); let fileInput = document.getElementById("lapFileFoto"); let filesArray = []; if (fileInput.files.length > 0) { for(let f=0; f<fileInput.files.length; f++){ let b64 = await toBase64(fileInput.files[f]); filesArray.push({ base64: b64, name: fileInput.files[f].name, mime: fileInput.files[f].type }); } } let res = await fetchAPI({ action: "submitLaporanPasca", id_jadwal: document.getElementById("lapJadwalID").value, peminjam: curUser.Nama_Lengkap, unit_peminjam: curUser.Unit, kondisi_alat: document.getElementById("lapKondisi").value, ada_insiden: document.getElementById("lapInsiden").value, kronologi: document.getElementById("lapKronologi").value, item_terpakai: terpakai, files: filesArray }); alert(res.message); if(res.status === "success") { document.getElementById("modalLaporan").classList.add("hidden"); document.getElementById("formLaporan").reset(); await loadAllDataSilently(); } btn.textContent = ot; btn.disabled = false; }
 
