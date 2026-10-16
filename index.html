@@ -760,13 +760,17 @@
         }
 
         function getTTDHtml(peminjam = null) {
-            let k_mts = getSetting("Kepala_Lab_MTs"); let k_ma = getSetting("Kepala_Lab_MA");
+            let k_mts = getSetting("Kepala_Lab_MTs"); 
+            let k_ma = getSetting("Kepala_Lab_MA");
             let dateStr = formatDateStr(new Date().toISOString());
             
+            let namaAdminTertanda = curUser.Unit === 'MTs' ? k_mts : k_ma;
+            let titleAdminTertanda = curUser.Unit === 'MTs' ? 'Kepala Laboratorium MTs' : 'Kepala Laboratorium MA';
+
             if(peminjam) {
                 return `<table class="ttd-table"><tr>
                         <td>Pelapor / Praktikan<br><br><br><br><br><span class="ttd-name">${peminjam.split(" (")[0]}</span></td>
-                        <td>Mengetahui,<br>Administrator Laboratorium<br><br><br><br><br><span class="ttd-name">${curUser.Role === 'Admin' ? curUser.Nama_Lengkap : k_mts}</span></td>
+                        <td>Mengetahui,<br>${titleAdminTertanda}<br><br><br><br><br><span class="ttd-name">${namaAdminTertanda}</span></td>
                     </tr></table>`;
             }
             return `<div style="text-align:right; margin-bottom:10px;">Bandung, ${dateStr}</div>
