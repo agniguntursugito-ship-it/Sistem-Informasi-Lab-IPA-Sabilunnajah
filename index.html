@@ -6,6 +6,8 @@
     <title>SI-LAB Terpadu | Sabilunnajah</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- [BARU V15] Chart.js untuk Grafik Layanan Laboratorium -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] }, boxShadow: { 'soft': '0 8px 30px rgba(0,0,0,0.04)' } } } }
     </script>
@@ -98,6 +100,7 @@
                         <button class="tab-btn-admin active-tab px-5 py-2.5 rounded-xl text-sm font-bold bg-white text-emerald-700 shadow-sm" onclick="switchAdminTab('tabInv', this)">Inventaris</button>
                         <button class="tab-btn-admin px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600" onclick="switchAdminTab('tabJadwal', this)">Jadwal &amp; Otoritas</button>
                         <button class="tab-btn-admin px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600" onclick="switchAdminTab('tabLaporan', this)">Laporan Data</button>
+                        <button class="tab-btn-admin px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600" onclick="switchAdminTab('tabLayanan', this); renderModulLayanan(true);">📊 Layanan &amp; Grafik</button>
                         <button class="tab-btn-admin px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600" onclick="switchAdminTab('tabPengaturan', this)">⚙️ Pengaturan</button>
                     </div>
                 </div>
@@ -125,6 +128,295 @@
                                 <thead><tr class="bg-slate-50 text-slate-500 text-[10px] uppercase border-b"><th class="p-4 font-bold">Foto</th><th class="p-4 font-bold">Informasi Aset</th><th class="p-4 font-bold text-center">Stok &amp; Milik</th><th class="p-4 font-bold text-right">Aksi</th></tr></thead>
                                 <tbody class="divide-y divide-slate-50" id="tabelAdminInv"></tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ====================================================
+                     [BARU V15] ADMIN ONLY: BUKU/JURNAL, DATA & GRAFIK LAYANAN
+                     ==================================================== -->
+                <div class="admin-tab hidden space-y-6" id="tabLayanan">
+                    <!-- Filter Periode & Cetak Paket Lengkap -->
+                    <div class="bg-white p-6 rounded-3xl shadow-soft border border-emerald-100">
+                        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                            <div>
+                                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-bold mb-2">Administrasi Akreditasi &amp; Supervisi</div>
+                                <h3 class="text-xl font-bold text-slate-800">Buku/Jurnal, Data &amp; Grafik Layanan Lab</h3>
+                                <p class="text-xs text-slate-500 mt-1">Alur terpadu: Pencatatan Harian &rarr; Rekapitulasi Statistik &rarr; Visualisasi Grafik Siap Cetak.</p>
+                            </div>
+                            <div class="flex flex-wrap gap-2 w-full lg:w-auto">
+                                <select id="layananFilterPeriode" onchange="renderModulLayanan(true)" class="border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold bg-slate-50 outline-none">
+                                    <option value="semua">Semua Periode</option>
+                                    <option value="ganjil">Semester Ganjil (Jul–Des)</option>
+                                    <option value="genap">Semester Genap (Jan–Jun)</option>
+                                    <option value="0">Bulan: Januari</option><option value="1">Bulan: Februari</option>
+                                    <option value="2">Bulan: Maret</option><option value="3">Bulan: April</option>
+                                    <option value="4">Bulan: Mei</option><option value="5">Bulan: Juni</option>
+                                    <option value="6">Bulan: Juli</option><option value="7">Bulan: Agustus</option>
+                                    <option value="8">Bulan: September</option><option value="9">Bulan: Oktober</option>
+                                    <option value="10">Bulan: November</option><option value="11">Bulan: Desember</option>
+                                </select>
+                                <select id="layananFilterTahun" onchange="renderModulLayanan(true)" class="border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold bg-slate-50 outline-none">
+                                    <option value="semua">Semua Tahun</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2026" selected>2026</option>
+                                    <option value="2027">2027</option>
+                                </select>
+                                <select id="layananFilterUnit" onchange="renderModulLayanan(true)" class="border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold bg-slate-50 outline-none">
+                                    <option value="Semua">Unit: Semua</option>
+                                    <option value="MTs">Unit: MTs</option>
+                                    <option value="MA">Unit: MA</option>
+                                </select>
+                                <button onclick="cetakPaketLayananLengkap()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-all">🖨️ Cetak Laporan &amp; Grafik</button>
+                            </div>
+                        </div>
+
+                        <!-- Sub-Navigasi 3 Pilar -->
+                        <div class="flex flex-wrap gap-2 mt-5 pt-4 border-t border-slate-100">
+                            <button onclick="switchSubLayanan('subBuku', this)" class="sub-layanan-btn bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all">1. Buku &amp; Jurnal (Logbook)</button>
+                            <button onclick="switchSubLayanan('subData', this)" class="sub-layanan-btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-4 py-2 rounded-xl text-xs font-bold transition-all">2. Data Rekapitulasi</button>
+                            <button onclick="switchSubLayanan('subGrafik', this)" class="sub-layanan-btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-4 py-2 rounded-xl text-xs font-bold transition-all">3. Grafik Visualisasi</button>
+                        </div>
+                    </div>
+
+                    <!-- PILAR 1: BUKU & JURNAL OPERASIONAL -->
+                    <div id="subBuku" class="sub-layanan-panel space-y-6">
+                        <div class="bg-white p-6 rounded-3xl shadow-soft border">
+                            <!-- Pilihan 5 Jenis Buku -->
+                            <div class="flex flex-wrap gap-2 mb-6 pb-4 border-b">
+                                <button onclick="switchJenisBuku('bukuJurnalRuang', this)" class="jenis-buku-btn bg-emerald-600 text-white px-3.5 py-2 rounded-xl text-xs font-bold">📒 Jurnal Ruang &amp; Praktikum</button>
+                                <button onclick="switchJenisBuku('bukuAlat', this)" class="jenis-buku-btn bg-slate-100 text-slate-600 px-3.5 py-2 rounded-xl text-xs font-bold">🔧 Buku Pinjam Alat</button>
+                                <button onclick="switchJenisBuku('bukuBHP', this)" class="jenis-buku-btn bg-slate-100 text-slate-600 px-3.5 py-2 rounded-xl text-xs font-bold">🧪 Jurnal Bahan (BHP)</button>
+                                <button onclick="switchJenisBuku('bukuInsiden', this)" class="jenis-buku-btn bg-slate-100 text-slate-600 px-3.5 py-2 rounded-xl text-xs font-bold">⚠️ Insiden &amp; Pemeliharaan</button>
+                                <button onclick="switchJenisBuku('bukuTamu', this)" class="jenis-buku-btn bg-slate-100 text-slate-600 px-3.5 py-2 rounded-xl text-xs font-bold">🏛️ Buku Kunjungan / Tamu</button>
+                            </div>
+
+                            <!-- BUKU 1: JURNAL PENGGUNAAN RUANG / KEGIATAN PRAKTIKUM -->
+                            <div id="bukuJurnalRuang" class="panel-buku space-y-5">
+                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                                    <div>
+                                        <h4 class="font-bold text-slate-800">Jurnal Penggunaan Ruang / Kegiatan Praktikum</h4>
+                                        <p class="text-[11px] text-slate-500">Catat realisasi praktikum harian secara baku atau tarik cepat dari jadwal yang sudah disetujui.</p>
+                                    </div>
+                                    <button onclick="cetakBukuLayanan('jurnal')" class="bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-xl text-xs font-bold">🖨️ Cetak Buku Jurnal</button>
+                                </div>
+
+                                <!-- Form Tambah Entri Jurnal -->
+                                <form onsubmit="simpanEntriJurnal(event)" class="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3">
+                                    <div class="flex flex-col md:flex-row justify-between md:items-center gap-2 border-b pb-2">
+                                        <span class="text-xs font-bold text-emerald-800">+ Catat Aktivitas Baru ke Jurnal</span>
+                                        <select id="imporJadwalSelect" onchange="isiFormJurnalDariJadwal(this.value)" class="text-[11px] border rounded-lg px-2 py-1 bg-white outline-none">
+                                            <option value="">-- Isi Cepat dari Jadwal Disetujui/Selesai --</option>
+                                        </select>
+                                    </div>
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Tanggal</label><input id="jrnTgl" type="date" required class="w-full border p-2 text-xs rounded-xl bg-white"></div>
+                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Jam Ke- / Waktu</label><input id="jrnJam" type="text" required placeholder="cth: 3-4 / 08:30-10:00" class="w-full border p-2 text-xs rounded-xl bg-white"></div>
+                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Kelas</label><input id="jrnKelas" type="text" required placeholder="cth: VIII-A / X-IPA" class="w-full border p-2 text-xs rounded-xl bg-white"></div>
+                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Jumlah Siswa</label><input id="jrnSiswa" type="number" min="1" required placeholder="cth: 32" class="w-full border p-2 text-xs rounded-xl bg-white"></div>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Mapel / Topik Praktikum</label><input id="jrnTopik" type="text" required placeholder="cth: IPA / Uji Kandungan Makanan" class="w-full border p-2 text-xs rounded-xl bg-white"></div>
+                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Guru Pengampu</label><input id="jrnGuru" type="text" required placeholder="Nama Guru" class="w-full border p-2 text-xs rounded-xl bg-white"></div>
+                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Unit</label><select id="jrnUnit" class="w-full border p-2 text-xs rounded-xl bg-white"><option value="MTs">MTs</option><option value="MA">MA</option></select></div>
+                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Jenis Layanan</label><select id="jrnJenis" class="w-full border p-2 text-xs rounded-xl bg-white"><option value="Praktikum di Lab">Praktikum di Lab</option><option value="Pinjam ke Kelas">Pinjam ke Kelas</option><option value="Pembinaan Olimpiade">Pembinaan Olimpiade</option><option value="Ekstrakurikuler">Ekstrakurikuler</option></select></div>
+                                    </div>
+                                    <div class="flex flex-col md:flex-row gap-3">
+                                        <input id="jrnCatatan" type="text" placeholder="Kondisi Akhir / Catatan (cth: Alat lengkap, 1 tabung reaksi retak)" class="flex-grow border p-2 text-xs rounded-xl bg-white">
+                                        <button id="btnSimpanJurnal" type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl text-xs font-bold shrink-0">Simpan ke Jurnal</button>
+                                    </div>
+                                </form>
+
+                                <div class="overflow-x-auto rounded-2xl border border-slate-100">
+                                    <table class="w-full text-left text-xs border-collapse">
+                                        <thead><tr class="bg-slate-50 text-slate-500 text-[10px] uppercase border-b"><th class="p-3">No</th><th class="p-3">Hari / Tanggal</th><th class="p-3">Jam Ke-</th><th class="p-3">Kelas</th><th class="p-3">Mapel / Topik</th><th class="p-3">Guru Pengampu</th><th class="p-3 text-center">Siswa</th><th class="p-3">Jenis Layanan</th><th class="p-3">Kondisi / Catatan</th><th class="p-3 text-right">Aksi</th></tr></thead>
+                                        <tbody id="tbodyJurnalRuang" class="divide-y divide-slate-50"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- BUKU 2: PEMINJAMAN & PENGEMBALIAN ALAT -->
+                            <div id="bukuAlat" class="panel-buku hidden space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <div><h4 class="font-bold text-slate-800">Buku Peminjaman &amp; Pengembalian Alat</h4><p class="text-[11px] text-slate-500">Rekap otomatis sirkulasi peminjaman alat dari sistem booking.</p></div>
+                                    <button onclick="cetakBukuLayanan('alat')" class="bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-xl text-xs font-bold">🖨️ Cetak Buku Alat</button>
+                                </div>
+                                <div class="overflow-x-auto rounded-2xl border border-slate-100">
+                                    <table class="w-full text-left text-xs border-collapse">
+                                        <thead><tr class="bg-slate-50 text-slate-500 text-[10px] uppercase border-b"><th class="p-3">No</th><th class="p-3">Tgl Pinjam - Kembali</th><th class="p-3">Peminjam (Unit)</th><th class="p-3">Spesifikasi &amp; Jml Alat</th><th class="p-3">Keperluan</th><th class="p-3">Status / Kondisi Akhir</th></tr></thead>
+                                        <tbody id="tbodyBukuAlat" class="divide-y divide-slate-50"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- BUKU 3: JURNAL BAHAN HABIS PAKAI (BHP) -->
+                            <div id="bukuBHP" class="panel-buku hidden space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <div><h4 class="font-bold text-slate-800">Jurnal Penggunaan Bahan Habis Pakai (BHP)</h4><p class="text-[11px] text-slate-500">Merekam keluarnya bahan kimia/preparat serta sisa stok terkini di inventaris.</p></div>
+                                    <button onclick="cetakBukuLayanan('bhp')" class="bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-xl text-xs font-bold">🖨️ Cetak Jurnal BHP</button>
+                                </div>
+                                <div class="overflow-x-auto rounded-2xl border border-slate-100">
+                                    <table class="w-full text-left text-xs border-collapse">
+                                        <thead><tr class="bg-slate-50 text-slate-500 text-[10px] uppercase border-b"><th class="p-3">No</th><th class="p-3">Tanggal</th><th class="p-3">Nama Bahan</th><th class="p-3">Milik</th><th class="p-3 text-center">Jml Diminta</th><th class="p-3 text-center">Sisa Stok Kini</th><th class="p-3">Pengguna / Keperluan</th></tr></thead>
+                                        <tbody id="tbodyBukuBHP" class="divide-y divide-slate-50"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- BUKU 4: INSIDEN, KERUSAKAN & PEMELIHARAAN -->
+                            <div id="bukuInsiden" class="panel-buku hidden space-y-5">
+                                <div class="flex justify-between items-center">
+                                    <div><h4 class="font-bold text-slate-800">Buku Catatan Insiden, Kerusakan &amp; Pemeliharaan (K3)</h4><p class="text-[11px] text-slate-500">Gabungan laporan insiden praktikum dan catatan servis/pemeliharaan alat.</p></div>
+                                    <button onclick="cetakBukuLayanan('insiden')" class="bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-xl text-xs font-bold">🖨️ Cetak Buku K3/Servis</button>
+                                </div>
+                                <form onsubmit="simpanEntriPemeliharaan(event)" class="bg-red-50/50 border border-red-100 p-4 rounded-2xl space-y-3">
+                                    <div class="text-xs font-bold text-red-800">+ Tambah Catatan Pemeliharaan / Kerusakan / K3</div>
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        <input id="logTgl" type="date" required class="border p-2 text-xs rounded-xl bg-white">
+                                        <input id="logAlat" type="text" required placeholder="Nama Alat / Fasilitas" class="border p-2 text-xs rounded-xl bg-white">
+                                        <select id="logUnit" class="border p-2 text-xs rounded-xl bg-white"><option value="MTs">MTs</option><option value="MA">MA</option><option value="Bersama">Bersama</option></select>
+                                        <select id="logJenis" class="border p-2 text-xs rounded-xl bg-white"><option value="Pemeliharaan Rutin">Pemeliharaan Rutin</option><option value="Kerusakan Alat">Kerusakan Alat</option><option value="Insiden K3">Insiden K3</option><option value="Kalibrasi / Servis">Kalibrasi / Servis</option></select>
+                                    </div>
+                                    <div class="flex flex-col md:flex-row gap-3">
+                                        <input id="logDesk" type="text" required placeholder="Deskripsi kendala &amp; tindakan perbaikan..." class="flex-grow border p-2 text-xs rounded-xl bg-white">
+                                        <select id="logStatus" class="border p-2 text-xs rounded-xl bg-white"><option value="Selesai Diperbaiki">Selesai Diperbaiki</option><option value="Dalam Perbaikan">Dalam Perbaikan</option><option value="Rusak Berat / Afkir">Rusak Berat / Afkir</option></select>
+                                        <button id="btnSimpanLog" type="submit" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-xs font-bold shrink-0">Simpan Catatan</button>
+                                    </div>
+                                </form>
+                                <div class="overflow-x-auto rounded-2xl border border-slate-100">
+                                    <table class="w-full text-left text-xs border-collapse">
+                                        <thead><tr class="bg-slate-50 text-slate-500 text-[10px] uppercase border-b"><th class="p-3">No</th><th class="p-3">Tanggal</th><th class="p-3">Sumber / Jenis</th><th class="p-3">Objek / Pelapor</th><th class="p-3">Uraian &amp; Tindakan</th><th class="p-3">Status</th><th class="p-3 text-right">Aksi</th></tr></thead>
+                                        <tbody id="tbodyBukuInsiden" class="divide-y divide-slate-50"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- BUKU 5: KUNJUNGAN / TAMU -->
+                            <div id="bukuTamu" class="panel-buku hidden space-y-5">
+                                <div class="flex justify-between items-center">
+                                    <div><h4 class="font-bold text-slate-800">Buku Kunjungan / Tamu Laboratorium</h4><p class="text-[11px] text-slate-500">Mencatat kunjungan supervisi kepala madrasah, pengawas, asesor akreditasi, atau tamu eksternal.</p></div>
+                                    <button onclick="cetakBukuLayanan('tamu')" class="bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-xl text-xs font-bold">🖨️ Cetak Buku Tamu</button>
+                                </div>
+                                <form onsubmit="simpanEntriTamu(event)" class="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3">
+                                    <div class="text-xs font-bold text-slate-800">+ Catat Kunjungan Tamu / Supervisi</div>
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        <input id="tamuTgl" type="date" required class="border p-2 text-xs rounded-xl bg-white">
+                                        <input id="tamuNama" type="text" required placeholder="Nama Tamu / Pengunjung" class="border p-2 text-xs rounded-xl bg-white">
+                                        <input id="tamuInstansi" type="text" required placeholder="Jabatan / Instansi" class="border p-2 text-xs rounded-xl bg-white">
+                                        <select id="tamuUnit" class="border p-2 text-xs rounded-xl bg-white"><option value="MTs">Lab MTs</option><option value="MA">Lab MA</option><option value="Terpadu">Terpadu MTs &amp; MA</option></select>
+                                    </div>
+                                    <div class="flex flex-col md:flex-row gap-3">
+                                        <input id="tamuKeperluan" type="text" required placeholder="Keperluan (cth: Supervisi Semester / Visitasi Akreditasi)" class="flex-grow border p-2 text-xs rounded-xl bg-white">
+                                        <input id="tamuKesan" type="text" placeholder="Kesan / Catatan / Rekomendasi" class="flex-grow border p-2 text-xs rounded-xl bg-white">
+                                        <button id="btnSimpanTamu" type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2 rounded-xl text-xs font-bold shrink-0">Simpan Tamu</button>
+                                    </div>
+                                </form>
+                                <div class="overflow-x-auto rounded-2xl border border-slate-100">
+                                    <table class="w-full text-left text-xs border-collapse">
+                                        <thead><tr class="bg-slate-50 text-slate-500 text-[10px] uppercase border-b"><th class="p-3">No</th><th class="p-3">Tanggal</th><th class="p-3">Nama Tamu</th><th class="p-3">Jabatan / Instansi</th><th class="p-3">Keperluan</th><th class="p-3">Kesan / Rekomendasi</th><th class="p-3 text-right">Aksi</th></tr></thead>
+                                        <tbody id="tbodyBukuTamu" class="divide-y divide-slate-50"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PILAR 2: DATA REKAPITULASI STATISTIK -->
+                    <div id="subData" class="sub-layanan-panel hidden space-y-6">
+                        <!-- 4 KPI Cards -->
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div class="bg-white p-5 rounded-3xl shadow-soft border border-emerald-100">
+                                <p class="text-[10px] font-bold uppercase text-slate-400">Total Sesi Layanan</p>
+                                <div id="kpiTotalSesi" class="text-3xl font-black text-emerald-700 mt-1">0</div>
+                                <p class="text-[10px] text-slate-500 mt-1">Praktikum &amp; peminjaman</p>
+                            </div>
+                            <div class="bg-white p-5 rounded-3xl shadow-soft border border-indigo-100">
+                                <p class="text-[10px] font-bold uppercase text-slate-400">Keterlaksanaan Program</p>
+                                <div id="kpiRealisasi" class="text-3xl font-black text-indigo-700 mt-1">0%</div>
+                                <p id="kpiTargetInfo" class="text-[10px] text-slate-500 mt-1">Target: 24 sesi</p>
+                            </div>
+                            <div class="bg-white p-5 rounded-3xl shadow-soft border border-amber-100">
+                                <p class="text-[10px] font-bold uppercase text-slate-400">Total Siswa Terlayani</p>
+                                <div id="kpiTotalSiswa" class="text-3xl font-black text-amber-600 mt-1">0</div>
+                                <p class="text-[10px] text-slate-500 mt-1">Akumulasi dari Jurnal</p>
+                            </div>
+                            <div class="bg-white p-5 rounded-3xl shadow-soft border border-teal-100">
+                                <p class="text-[10px] font-bold uppercase text-slate-400">Kelayakan Aset Lab</p>
+                                <div id="kpiKelayakan" class="text-3xl font-black text-teal-700 mt-1">0%</div>
+                                <p id="kpiKondisiInfo" class="text-[10px] text-slate-500 mt-1">Kondisi Baik vs Rusak</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Rekap Frekuensi per Bulan -->
+                            <div class="bg-white p-6 rounded-3xl shadow-soft border">
+                                <h4 class="font-bold text-slate-800 mb-4">Rekap Frekuensi Layanan per Bulan</h4>
+                                <div class="overflow-x-auto rounded-xl border">
+                                    <table class="w-full text-left text-xs border-collapse">
+                                        <thead><tr class="bg-slate-50 border-b text-[10px] uppercase text-slate-500"><th class="p-3">Bulan</th><th class="p-3 text-center">Sesi Jurnal</th><th class="p-3 text-center">Booking Sistem</th><th class="p-3 text-center">Total Siswa</th></tr></thead>
+                                        <tbody id="tbodyRekapBulan" class="divide-y divide-slate-50"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Rekap Utilisasi Alat & Konsumsi Bahan -->
+                            <div class="bg-white p-6 rounded-3xl shadow-soft border space-y-6">
+                                <div>
+                                    <h4 class="font-bold text-slate-800 mb-3">Top Utilisasi Alat (High-Usage)</h4>
+                                    <div class="overflow-x-auto rounded-xl border">
+                                        <table class="w-full text-left text-xs border-collapse">
+                                            <thead><tr class="bg-slate-50 border-b text-[10px] uppercase text-slate-500"><th class="p-2.5">Nama Alat</th><th class="p-2.5 text-center">Frekuensi Pinjam</th><th class="p-2.5 text-center">Total Unit Dipinjam</th></tr></thead>
+                                            <tbody id="tbodyTopAlat" class="divide-y divide-slate-50"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-800 mb-3">Rekap Konsumsi Bahan Habis Pakai (BHP)</h4>
+                                    <div class="overflow-x-auto rounded-xl border">
+                                        <table class="w-full text-left text-xs border-collapse">
+                                            <thead><tr class="bg-slate-50 border-b text-[10px] uppercase text-slate-500"><th class="p-2.5">Nama Bahan</th><th class="p-2.5 text-center">Total Digunakan</th><th class="p-2.5 text-center">Sisa Stok</th></tr></thead>
+                                            <tbody id="tbodyTopBHP" class="divide-y divide-slate-50"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PILAR 3: GRAFIK VISUALISASI (CHART.JS) -->
+                    <div id="subGrafik" class="sub-layanan-panel hidden space-y-6">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="bg-white p-6 rounded-3xl shadow-soft border">
+                                <h4 class="font-bold text-slate-800 text-sm mb-1">Grafik 1: Jumlah Sesi Layanan per Bulan (Bar Chart)</h4>
+                                <p class="text-[11px] text-slate-400 mb-4">Perbandingan aktivitas praktikum &amp; layanan antar bulan.</p>
+                                <div class="relative h-64"><canvas id="chartSesiBulan"></canvas></div>
+                            </div>
+                            <div class="bg-white p-6 rounded-3xl shadow-soft border">
+                                <h4 class="font-bold text-slate-800 text-sm mb-1">Grafik 2: Tren Intensitas Pemakaian Lab (Line Chart)</h4>
+                                <p class="text-[11px] text-slate-400 mb-4">Pola kenaikan dan penurunan layanan sepanjang periode.</p>
+                                <div class="relative h-64"><canvas id="chartTrenBulan"></canvas></div>
+                            </div>
+                            <div class="bg-white p-6 rounded-3xl shadow-soft border">
+                                <h4 class="font-bold text-slate-800 text-sm mb-1">Grafik 3: Distribusi Pemanfaatan per Tingkat Kelas</h4>
+                                <p class="text-[11px] text-slate-400 mb-4">Perbandingan sesi antar kelas (VII, VIII, IX, X, XI, XII).</p>
+                                <div class="relative h-64"><canvas id="chartPerKelas"></canvas></div>
+                            </div>
+                            <div class="bg-white p-6 rounded-3xl shadow-soft border">
+                                <h4 class="font-bold text-slate-800 text-sm mb-1">Grafik 4: Proporsi Jenis Layanan &amp; Kelayakan Alat</h4>
+                                <p class="text-[11px] text-slate-400 mb-4">Komposisi layanan praktikum serta persentase kondisi aset.</p>
+                                <div class="grid grid-cols-2 gap-3 h-64">
+                                    <div class="relative"><canvas id="chartJenisLayanan"></canvas></div>
+                                    <div class="relative"><canvas id="chartKelayakanAlat"></canvas></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-3xl shadow-soft border flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div class="md:w-1/2">
+                                <h4 class="font-bold text-slate-800 text-base mb-2">Grafik 5: Persentase Realisasi Program Praktikum</h4>
+                                <p class="text-xs text-slate-500">Membandingkan realisasi layanan yang terlaksana terhadap target program semester yang diatur di menu Pengaturan.</p>
+                                <button onclick="cetakPaketLayananLengkap()" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md">🖨️ Cetak Poster Grafik (Display Lab)</button>
+                            </div>
+                            <div class="relative w-56 h-56"><canvas id="chartRealisasiProgram"></canvas></div>
                         </div>
                     </div>
                 </div>
@@ -198,6 +490,18 @@
                             <div class="bg-slate-50 border p-4 rounded-2xl">
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Nama Kepala Lab MA (Beserta Gelar)</label>
                                 <input type="text" id="setKepalaMA" required class="w-full border-slate-300 border p-3 text-sm rounded-xl outline-none focus:border-emerald-500">
+                            </div>
+                            <div class="bg-slate-50 border p-4 rounded-2xl">
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Nama Kepala Madrasah MTs (Untuk TTD Jurnal &amp; Grafik)</label>
+                                <input type="text" id="setKepmadMTs" class="w-full border-slate-300 border p-3 text-sm rounded-xl outline-none focus:border-emerald-500">
+                            </div>
+                            <div class="bg-slate-50 border p-4 rounded-2xl">
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Nama Kepala Madrasah MA (Untuk TTD Jurnal &amp; Grafik)</label>
+                                <input type="text" id="setKepmadMA" class="w-full border-slate-300 border p-3 text-sm rounded-xl outline-none focus:border-emerald-500">
+                            </div>
+                            <div class="bg-slate-50 border p-4 rounded-2xl">
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Target Program Sesi Praktikum per Semester</label>
+                                <input type="number" id="setTargetSesi" min="1" class="w-full border-slate-300 border p-3 text-sm rounded-xl outline-none focus:border-emerald-500">
                             </div>
                             <button type="submit" id="btnSimpanPengaturan" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-md transition-all">Simpan Pengaturan</button>
                         </form>
@@ -948,6 +1252,549 @@
 
         // --- USULAN PENGADAAN GURU ---
         async function submitUsulan(e) { e.preventDefault(); let btn = document.getElementById("btnUsul"); let ot = btn.textContent; btn.textContent = "Mengirim..."; btn.disabled = true; let payload = { action: "usulkanItem", pengusul: curUser.Nama_Lengkap, unit: curUser.Unit, nama_item: document.getElementById("usulNama").value, kategori: document.getElementById("usulKat").value, jumlah: document.getElementById("usulJml").value, alasan: document.getElementById("usulAlasan").value }; let res = await fetchAPI(payload); alert(res.message); if(res.status === "success"){ document.getElementById("modalUsulan").classList.add("hidden"); e.target.reset(); await loadAllDataSilently(); } btn.textContent = ot; btn.disabled = false; }
+    // ============================================================
+        // [BARU V15] MODUL BUKU/JURNAL, DATA & GRAFIK LAYANAN (ADMIN)
+        // ============================================================
+        let silabCharts = {};
+
+        // Perluas populatePengaturanForm & simpanPengaturan agar mencakup Kepala Madrasah & Target Sesi
+        const _origPopulatePengaturan = populatePengaturanForm;
+        populatePengaturanForm = function() {
+            _origPopulatePengaturan();
+            if (document.getElementById("setKepmadMTs")) {
+                let kmMts = getSetting("Kepala_Madrasah_MTs");
+                let kmMa = getSetting("Kepala_Madrasah_MA");
+                let targetS = getSetting("Target_Sesi_Semester");
+                document.getElementById("setKepmadMTs").value = kmMts !== "Nama Belum Diatur" ? kmMts : "Agung Hidayatullah, S.Sos.I.";
+                document.getElementById("setKepmadMA").value = kmMa !== "Nama Belum Diatur" ? kmMa : "Kepala Madrasah MA";
+                document.getElementById("setTargetSesi").value = targetS !== "Nama Belum Diatur" ? targetS : "24";
+            }
+        };
+
+        simpanPengaturan = async function(e) {
+            e.preventDefault();
+            let btn = document.getElementById("btnSimpanPengaturan");
+            let ot = btn.textContent; btn.textContent = "Menyimpan..."; btn.disabled = true;
+            let res = await fetchAPI({
+                action: "simpanPengaturan",
+                kepala_mts: document.getElementById("setKepalaMTs").value,
+                kepala_ma: document.getElementById("setKepalaMA").value,
+                kepala_madrasah_mts: document.getElementById("setKepmadMTs") ? document.getElementById("setKepmadMTs").value : "",
+                kepala_madrasah_ma: document.getElementById("setKepmadMA") ? document.getElementById("setKepmadMA").value : "",
+                target_sesi: document.getElementById("setTargetSesi") ? document.getElementById("setTargetSesi").value : "24"
+            });
+            alert(res.message);
+            await loadAllDataSilently();
+            btn.textContent = ot; btn.disabled = false;
+        };
+
+        // Kaitkan auto-refresh modul layanan pada sinkronisasi latar belakang (tanpa animasi loncat)
+        const _origRenderLaporanAdmin = renderLaporanAdmin;
+        renderLaporanAdmin = function() {
+            _origRenderLaporanAdmin();
+            if (curUser && curUser.Role === "Admin") {
+                renderModulLayanan(false);
+            }
+        };
+
+        function switchSubLayanan(panelId, btn) {
+            document.querySelectorAll('.sub-layanan-panel').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('.sub-layanan-btn').forEach(b => {
+                b.classList.remove('bg-slate-800', 'text-white');
+                b.classList.add('bg-slate-100', 'text-slate-600');
+            });
+            document.getElementById(panelId).classList.remove('hidden');
+            btn.classList.remove('bg-slate-100', 'text-slate-600');
+            btn.classList.add('bg-slate-800', 'text-white');
+            if (panelId === 'subGrafik') renderGrafikLayanan(true);
+        }
+
+        function switchJenisBuku(bukuId, btn) {
+            document.querySelectorAll('.panel-buku').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('.jenis-buku-btn').forEach(b => {
+                b.classList.remove('bg-emerald-600', 'text-white');
+                b.classList.add('bg-slate-100', 'text-slate-600');
+            });
+            document.getElementById(bukuId).classList.remove('hidden');
+            btn.classList.remove('bg-slate-100', 'text-slate-600');
+            btn.classList.add('bg-emerald-600', 'text-white');
+        }
+
+        function formatHariTanggal(dateStr) {
+            if (!dateStr) return "-";
+            try {
+                let d = new Date(dateStr);
+                if (isNaN(d.getTime())) return dateStr;
+                let hari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"][d.getDay()];
+                let dd = String(d.getDate()).padStart(2, '0');
+                let mm = String(d.getMonth() + 1).padStart(2, '0');
+                return `${hari}, ${dd}/${mm}/${d.getFullYear()}`;
+            } catch (e) { return dateStr; }
+        }
+
+        function cocokFilterPeriode(dateStr, unitVal) {
+            let fPeriode = document.getElementById("layananFilterPeriode").value;
+            let fTahun = document.getElementById("layananFilterTahun").value;
+            let fUnit = document.getElementById("layananFilterUnit").value;
+
+            if (fUnit !== "Semua" && unitVal && unitVal !== "Bersama" && unitVal !== "Terpadu" && unitVal !== fUnit) return false;
+            if (!dateStr) return fPeriode === "semua" && fTahun === "semua";
+
+            let d = new Date(dateStr);
+            if (isNaN(d.getTime())) return true;
+
+            if (fTahun !== "semua" && String(d.getFullYear()) !== fTahun) return false;
+            let bln = d.getMonth(); // 0-11
+            if (fPeriode === "ganjil" && (bln < 6 || bln > 11)) return false;
+            if (fPeriode === "genap" && (bln < 0 || bln > 5)) return false;
+            if (!isNaN(parseInt(fPeriode)) && bln !== parseInt(fPeriode)) return false;
+            return true;
+        }
+
+        function isiDropdownImporJadwal() {
+            let sel = document.getElementById("imporJadwalSelect");
+            if (!sel) return;
+            let valSkrg = sel.value;
+            let html = `<option value="">-- Isi Cepat dari Jadwal Disetujui/Selesai --</option>`;
+            (db.jadwal || []).filter(j => j.Status_Global === "Disetujui" || j.Status_Global.includes("Selesai")).slice().reverse().forEach(j => {
+                html += `<option value="${j.ID_Jadwal}">${formatDateStr(j.Tgl_Mulai)} | ${j.Peminjam.split(" (")[0]} - ${j.Keperluan}</option>`;
+            });
+            sel.innerHTML = html;
+            sel.value = valSkrg;
+        }
+
+        function isiFormJurnalDariJadwal(idJadwal) {
+            if (!idJadwal) return;
+            let j = (db.jadwal || []).find(x => x.ID_Jadwal === idJadwal);
+            if (!j) return;
+            document.getElementById("jrnTgl").value = j.Tgl_Mulai ? String(j.Tgl_Mulai).substring(0, 10) : "";
+            document.getElementById("jrnJam").value = `${j.Jam_Mulai || ''} - ${j.Jam_Selesai || ''}`;
+            document.getElementById("jrnTopik").value = j.Keperluan || "";
+            document.getElementById("jrnGuru").value = j.Peminjam ? j.Peminjam.split(" (")[0] : "";
+            document.getElementById("jrnUnit").value = j.Unit === "MA" ? "MA" : "MTs";
+            let lap = (db.laporan || []).find(l => l.ID_Jadwal === idJadwal);
+            document.getElementById("jrnCatatan").value = lap ? lap.Kondisi_Bahan_Alat : "Praktikum berjalan lancar";
+        }
+
+        // --- CRUD JURNAL, TAMU, PEMELIHARAAN ---
+        async function simpanEntriJurnal(e) {
+            e.preventDefault();
+            let btn = document.getElementById("btnSimpanJurnal"); let ot = btn.textContent; btn.textContent = "Menyimpan..."; btn.disabled = true;
+            let res = await fetchAPI({
+                action: "simpanJurnal",
+                tanggal: document.getElementById("jrnTgl").value,
+                jam_ke: document.getElementById("jrnJam").value,
+                kelas: document.getElementById("jrnKelas").value,
+                mapel_topik: document.getElementById("jrnTopik").value,
+                guru_pengampu: document.getElementById("jrnGuru").value,
+                unit: document.getElementById("jrnUnit").value,
+                jumlah_siswa: document.getElementById("jrnSiswa").value,
+                jenis_layanan: document.getElementById("jrnJenis").value,
+                kondisi_catatan: document.getElementById("jrnCatatan").value || "Alat lengkap & baik"
+            });
+            alert(res.message);
+            if (res.status === "success") { e.target.reset(); await loadAllDataSilently(); renderModulLayanan(true); }
+            btn.textContent = ot; btn.disabled = false;
+        }
+
+        async function hapusEntriJurnal(id) {
+            if (!confirm("Hapus entri jurnal ini?")) return;
+            let res = await fetchAPI({ action: "hapusJurnal", id_jurnal: id });
+            if (res.status === "success") { await loadAllDataSilently(); renderModulLayanan(true); }
+        }
+
+        async function simpanEntriTamu(e) {
+            e.preventDefault();
+            let btn = document.getElementById("btnSimpanTamu"); let ot = btn.textContent; btn.textContent = "Menyimpan..."; btn.disabled = true;
+            let res = await fetchAPI({
+                action: "simpanTamu",
+                tanggal: document.getElementById("tamuTgl").value,
+                nama_tamu: document.getElementById("tamuNama").value,
+                instansi_jabatan: document.getElementById("tamuInstansi").value,
+                unit_tujuan: document.getElementById("tamuUnit").value,
+                keperluan: document.getElementById("tamuKeperluan").value,
+                kesan_pesan: document.getElementById("tamuKesan").value || "-"
+            });
+            alert(res.message);
+            if (res.status === "success") { e.target.reset(); await loadAllDataSilently(); renderModulLayanan(true); }
+            btn.textContent = ot; btn.disabled = false;
+        }
+
+        async function hapusEntriTamu(id) {
+            if (!confirm("Hapus catatan kunjungan tamu ini?")) return;
+            let res = await fetchAPI({ action: "hapusTamu", id_tamu: id });
+            if (res.status === "success") { await loadAllDataSilently(); renderModulLayanan(true); }
+        }
+
+        async function simpanEntriPemeliharaan(e) {
+            e.preventDefault();
+            let btn = document.getElementById("btnSimpanLog"); let ot = btn.textContent; btn.textContent = "Menyimpan..."; btn.disabled = true;
+            let res = await fetchAPI({
+                action: "simpanPemeliharaan",
+                tanggal: document.getElementById("logTgl").value,
+                nama_alat: document.getElementById("logAlat").value,
+                unit: document.getElementById("logUnit").value,
+                jenis_catatan: document.getElementById("logJenis").value,
+                deskripsi_tindakan: document.getElementById("logDesk").value,
+                status: document.getElementById("logStatus").value
+            });
+            alert(res.message);
+            if (res.status === "success") { e.target.reset(); await loadAllDataSilently(); renderModulLayanan(true); }
+            btn.textContent = ot; btn.disabled = false;
+        }
+
+        async function hapusEntriPemeliharaan(id) {
+            if (!confirm("Hapus catatan pemeliharaan ini?")) return;
+            let res = await fetchAPI({ action: "hapusPemeliharaan", id_log: id });
+            if (res.status === "success") { await loadAllDataSilently(); renderModulLayanan(true); }
+        }
+
+        // --- KOMPILASI & RENDER SELURUH MODUL LAYANAN ---
+        function kumpulkanDataLayanan() {
+            let jurnalF = (db.jurnal || []).filter(x => cocokFilterPeriode(x.Tanggal, x.Unit));
+            let jadwalF = (db.jadwal || []).filter(x => (x.Status_Global === "Disetujui" || x.Status_Global.includes("Selesai")) && cocokFilterPeriode(x.Tgl_Mulai, x.Unit));
+            let tamuF = (db.tamu || []).filter(x => cocokFilterPeriode(x.Tanggal, x.Unit_Tujuan));
+            let logF = (db.pemeliharaan || []).filter(x => cocokFilterPeriode(x.Tanggal, x.Unit));
+            let laporF = (db.laporan || []).filter(x => cocokFilterPeriode(x.Tanggal_Lapor, "Semua"));
+            let fUnit = document.getElementById("layananFilterUnit").value;
+            let invF = (db.inventaris || []).filter(i => fUnit === "Semua" || i.Kepemilikan === fUnit || i.Kepemilikan === "Bersama");
+            return { jurnalF, jadwalF, tamuF, logF, laporF, invF };
+        }
+
+        function renderModulLayanan(animateCharts = false) {
+            if (!document.getElementById("tabLayanan")) return;
+            isiDropdownImporJadwal();
+            let { jurnalF, jadwalF, tamuF, logF, laporF, invF } = kumpulkanDataLayanan();
+
+            // 1. RENDER BUKU JURNAL RUANG
+            let tbJ = document.getElementById("tbodyJurnalRuang"); tbJ.innerHTML = "";
+            if (jurnalF.length === 0) {
+                tbJ.innerHTML = `<tr><td colspan="10" class="p-6 text-center text-slate-400 italic">Belum ada entri jurnal pada periode ini. Gunakan form di atas untuk mencatat.</td></tr>`;
+            } else {
+                jurnalF.forEach((j, idx) => {
+                    tbJ.innerHTML += `<tr class="hover:bg-slate-50"><td class="p-3 font-bold">${idx + 1}</td><td class="p-3 whitespace-nowrap">${formatHariTanggal(j.Tanggal)}</td><td class="p-3">${j.Jam_Ke}</td><td class="p-3 font-bold">${j.Kelas} <span class="text-[9px] text-slate-400">(${j.Unit})</span></td><td class="p-3">${j.Mapel_Topik}</td><td class="p-3">${j.Guru_Pengampu}</td><td class="p-3 text-center font-bold">${j.Jumlah_Siswa}</td><td class="p-3"><span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">${j.Jenis_Layanan}</span></td><td class="p-3 text-slate-600">${j.Kondisi_Catatan || '-'}</td><td class="p-3 text-right"><button onclick="hapusEntriJurnal('${j.ID_Jurnal}')" class="text-red-500 hover:underline font-bold text-[10px]">Hapus</button></td></tr>`;
+                });
+            }
+
+            // 2. RENDER BUKU PINJAM ALAT
+            let tbA = document.getElementById("tbodyBukuAlat"); tbA.innerHTML = "";
+            let idxAlat = 0;
+            jadwalF.forEach(j => {
+                let alatList = (db.detail || []).filter(d => d.ID_Jadwal === j.ID_Jadwal).map(d => `${d.Nama_Barang} (x${d.Jumlah})`).join(", ");
+                if (!alatList) return;
+                idxAlat++;
+                let lap = (db.laporan || []).find(l => l.ID_Jadwal === j.ID_Jadwal);
+                let kondisi = lap ? lap.Kondisi_Bahan_Alat : j.Status_Global;
+                tbA.innerHTML += `<tr class="hover:bg-slate-50"><td class="p-3 font-bold">${idxAlat}</td><td class="p-3 whitespace-nowrap">${formatDateStr(j.Tgl_Mulai)} &ndash; ${formatDateStr(j.Tgl_Selesai)}</td><td class="p-3 font-bold">${j.Peminjam} <span class="text-[10px] text-slate-400">(${j.Unit})</span></td><td class="p-3">${alatList}</td><td class="p-3">${j.Keperluan}</td><td class="p-3"><span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold">${kondisi}</span></td></tr>`;
+            });
+            if (idxAlat === 0) tbA.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic">Belum ada transaksi peminjaman alat pada periode ini.</td></tr>`;
+
+            // 3. RENDER JURNAL BHP
+            let tbB = document.getElementById("tbodyBukuBHP"); tbB.innerHTML = "";
+            let idxBHP = 0;
+            let konsumsiBHPMap = {};
+            jadwalF.forEach(j => {
+                (db.detail || []).filter(d => d.ID_Jadwal === j.ID_Jadwal).forEach(d => {
+                    let invItem = (db.inventaris || []).find(i => i.ID_Barang === d.ID_Barang);
+                    if (invItem && invItem.Kategori === "Bahan") {
+                        idxBHP++;
+                        konsumsiBHPMap[d.Nama_Barang] = {
+                            terpakai: (konsumsiBHPMap[d.Nama_Barang]?.terpakai || 0) + (parseInt(d.Jumlah) || 0),
+                            sisa: `${invItem.Stok} ${invItem.Satuan}`
+                        };
+                        tbB.innerHTML += `<tr class="hover:bg-slate-50"><td class="p-3 font-bold">${idxBHP}</td><td class="p-3 whitespace-nowrap">${formatDateStr(j.Tgl_Mulai)}</td><td class="p-3 font-bold">${d.Nama_Barang}</td><td class="p-3">${d.Kepemilikan}</td><td class="p-3 text-center font-bold text-amber-700">${d.Jumlah} ${invItem.Satuan}</td><td class="p-3 text-center font-bold text-emerald-700">${invItem.Stok} ${invItem.Satuan}</td><td class="p-3">${j.Peminjam.split(" (")[0]} &ndash; ${j.Keperluan}</td></tr>`;
+                    }
+                });
+            });
+            if (idxBHP === 0) tbB.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400 italic">Belum ada penggunaan Bahan Habis Pakai (BHP) pada periode ini.</td></tr>`;
+
+            // 4. RENDER BUKU INSIDEN & PEMELIHARAAN
+            let tbI = document.getElementById("tbodyBukuInsiden"); tbI.innerHTML = "";
+            let idxIns = 0;
+            laporF.filter(l => l.Insiden_Kecelakaan && l.Insiden_Kecelakaan !== "Tidak Ada").forEach(l => {
+                idxIns++;
+                tbI.innerHTML += `<tr class="bg-red-50/30"><td class="p-3 font-bold">${idxIns}</td><td class="p-3 whitespace-nowrap">${formatDateStr(l.Tanggal_Lapor)}</td><td class="p-3"><span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold">Insiden: ${l.Insiden_Kecelakaan}</span></td><td class="p-3 font-bold">${l.Peminjam}</td><td class="p-3">${l.Kronologi_Insiden || l.Kondisi_Bahan_Alat}</td><td class="p-3 text-xs">Tercatat di Laporan</td><td class="p-3 text-right text-[10px] text-slate-400">Otomatis</td></tr>`;
+            });
+            logF.forEach(p => {
+                idxIns++;
+                tbI.innerHTML += `<tr class="hover:bg-slate-50"><td class="p-3 font-bold">${idxIns}</td><td class="p-3 whitespace-nowrap">${formatDateStr(p.Tanggal)}</td><td class="p-3"><span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold">${p.Jenis_Catatan}</span></td><td class="p-3 font-bold">${p.Nama_Alat} (${p.Unit})</td><td class="p-3">${p.Deskripsi_Tindakan}</td><td class="p-3 font-bold text-emerald-700">${p.Status}</td><td class="p-3 text-right"><button onclick="hapusEntriPemeliharaan('${p.ID_Log}')" class="text-red-500 hover:underline font-bold text-[10px]">Hapus</button></td></tr>`;
+            });
+            if (idxIns === 0) tbI.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400 italic">Nihil insiden maupun catatan pemeliharaan pada periode ini.</td></tr>`;
+
+            // 5. RENDER BUKU TAMU
+            let tbT = document.getElementById("tbodyBukuTamu"); tbT.innerHTML = "";
+            if (tamuF.length === 0) {
+                tbT.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400 italic">Belum ada catatan kunjungan/tamu pada periode ini.</td></tr>`;
+            } else {
+                tamuF.forEach((t, idx) => {
+                    tbT.innerHTML += `<tr class="hover:bg-slate-50"><td class="p-3 font-bold">${idx + 1}</td><td class="p-3 whitespace-nowrap">${formatDateStr(t.Tanggal)}</td><td class="p-3 font-bold">${t.Nama_Tamu}</td><td class="p-3">${t.Instansi_Jabatan}</td><td class="p-3">${t.Keperluan}</td><td class="p-3 text-slate-600">${t.Kesan_Pesan || '-'}</td><td class="p-3 text-right"><button onclick="hapusEntriTamu('${t.ID_Tamu}')" class="text-red-500 hover:underline font-bold text-[10px]">Hapus</button></td></tr>`;
+                });
+            }
+
+            // === HITUNG STATISTIK REKAP DATA (PILAR 2) ===
+            let totalSesi = jurnalF.length > 0 ? jurnalF.length : jadwalF.length;
+            let targetSesi = parseInt(getSetting("Target_Sesi_Semester")) || 24;
+            let persenRealisasi = Math.min(100, Math.round((totalSesi / targetSesi) * 100));
+            let totalSiswa = jurnalF.reduce((acc, j) => acc + (parseInt(j.Jumlah_Siswa) || 0), 0);
+            let asetBaik = invF.filter(i => i.Kondisi === "Baik").length;
+            let persenLayak = invF.length > 0 ? Math.round((asetBaik / invF.length) * 100) : 100;
+
+            document.getElementById("kpiTotalSesi").textContent = totalSesi;
+            document.getElementById("kpiRealisasi").textContent = persenRealisasi + "%";
+            document.getElementById("kpiTargetInfo").textContent = `Realisasi ${totalSesi} dari target ${targetSesi} sesi`;
+            document.getElementById("kpiTotalSiswa").textContent = totalSiswa;
+            document.getElementById("kpiKelayakan").textContent = persenLayak + "%";
+            document.getElementById("kpiKondisiInfo").textContent = `${asetBaik} Baik / ${invF.length - asetBaik} Rusak`;
+
+            // Rekap Per Bulan
+            let namaBulan = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+            let tbBulan = document.getElementById("tbodyRekapBulan"); tbBulan.innerHTML = "";
+            for (let m = 0; m < 12; m++) {
+                let jB = jurnalF.filter(x => new Date(x.Tanggal).getMonth() === m);
+                let bB = jadwalF.filter(x => new Date(x.Tgl_Mulai).getMonth() === m);
+                let sB = jB.reduce((a, b) => a + (parseInt(b.Jumlah_Siswa) || 0), 0);
+                if (jB.length > 0 || bB.length > 0) {
+                    tbBulan.innerHTML += `<tr><td class="p-2.5 font-bold">${namaBulan[m]}</td><td class="p-2.5 text-center font-bold text-emerald-700">${jB.length}</td><td class="p-2.5 text-center font-bold text-indigo-700">${bB.length}</td><td class="p-2.5 text-center">${sB}</td></tr>`;
+                }
+            }
+            if (!tbBulan.innerHTML) tbBulan.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400 italic">Belum ada data pada periode ini.</td></tr>`;
+
+            // Top Utilisasi Alat
+            let alatMap = {};
+            jadwalF.forEach(j => {
+                (db.detail || []).filter(d => d.ID_Jadwal === j.ID_Jadwal).forEach(d => {
+                    let invItem = (db.inventaris || []).find(i => i.ID_Barang === d.ID_Barang);
+                    if (!invItem || invItem.Kategori !== "Bahan") {
+                        if (!alatMap[d.Nama_Barang]) alatMap[d.Nama_Barang] = { frek: 0, qty: 0 };
+                        alatMap[d.Nama_Barang].frek += 1;
+                        alatMap[d.Nama_Barang].qty += (parseInt(d.Jumlah) || 0);
+                    }
+                });
+            });
+            let topAlatArr = Object.entries(alatMap).sort((a, b) => b[1].frek - a[1].frek).slice(0, 8);
+            let tbTopAlat = document.getElementById("tbodyTopAlat"); tbTopAlat.innerHTML = "";
+            topAlatArr.forEach(([nama, val]) => {
+                tbTopAlat.innerHTML += `<tr><td class="p-2.5 font-bold">${nama}</td><td class="p-2.5 text-center">${val.frek}x</td><td class="p-2.5 text-center font-bold text-emerald-700">${val.qty}</td></tr>`;
+            });
+            if (topAlatArr.length === 0) tbTopAlat.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-slate-400 italic">Belum ada data peminjaman alat.</td></tr>`;
+
+            // Top BHP
+            let tbTopBHP = document.getElementById("tbodyTopBHP"); tbTopBHP.innerHTML = "";
+            let topBHPArr = Object.entries(konsumsiBHPMap).sort((a, b) => b[1].terpakai - a[1].terpakai).slice(0, 8);
+            topBHPArr.forEach(([nama, val]) => {
+                tbTopBHP.innerHTML += `<tr><td class="p-2.5 font-bold">${nama}</td><td class="p-2.5 text-center font-bold text-amber-700">${val.terpakai}</td><td class="p-2.5 text-center">${val.sisa}</td></tr>`;
+            });
+            if (topBHPArr.length === 0) tbTopBHP.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-slate-400 italic">Belum ada data konsumsi BHP.</td></tr>`;
+
+            // Render Grafik jika panel grafik aktif atau diminta
+            if (animateCharts || !document.getElementById("subGrafik").classList.contains("hidden")) {
+                renderGrafikLayanan(animateCharts);
+            }
+        }
+
+        function buatAtauUpdateChart(canvasId, config) {
+            let canvas = document.getElementById(canvasId);
+            if (!canvas || typeof Chart === "undefined") return;
+            if (silabCharts[canvasId]) silabCharts[canvasId].destroy();
+            silabCharts[canvasId] = new Chart(canvas.getContext("2d"), config);
+        }
+
+        function renderGrafikLayanan(withAnimation = false) {
+            let { jurnalF, jadwalF, invF } = kumpulkanDataLayanan();
+            let animOpt = withAnimation ? { duration: 400 } : false;
+
+            let fPeriode = document.getElementById("layananFilterPeriode").value;
+            let blnIndices = fPeriode === "ganjil" ? [6,7,8,9,10,11] : (fPeriode === "genap" ? [0,1,2,3,4,5] : [0,1,2,3,4,5,6,7,8,9,10,11]);
+            let blnLabelsFull = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+            let labelsBln = blnIndices.map(i => blnLabelsFull[i]);
+            let sumberSesi = jurnalF.length > 0 ? jurnalF.map(x => x.Tanggal) : jadwalF.map(x => x.Tgl_Mulai);
+            let dataSesiBln = blnIndices.map(m => sumberSesi.filter(tgl => new Date(tgl).getMonth() === m).length);
+
+            // Grafik 1: Bar Chart Sesi per Bulan
+            buatAtauUpdateChart("chartSesiBulan", {
+                type: "bar",
+                data: { labels: labelsBln, datasets: [{ label: "Jumlah Sesi", data: dataSesiBln, backgroundColor: "#059669", borderRadius: 6 }] },
+                options: { responsive: true, maintainAspectRatio: false, animation: animOpt, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+            });
+
+            // Grafik 2: Line Chart Tren Intensitas
+            buatAtauUpdateChart("chartTrenBulan", {
+                type: "line",
+                data: { labels: labelsBln, datasets: [{ label: "Tren Layanan", data: dataSesiBln, borderColor: "#4f46e5", backgroundColor: "rgba(79,70,229,0.12)", fill: true, tension: 0.35 }] },
+                options: { responsive: true, maintainAspectRatio: false, animation: animOpt, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+            });
+
+            // Grafik 3: Distribusi Tingkat Kelas
+            let kelasLabels = ["Kelas VII", "Kelas VIII", "Kelas IX", "Kelas X", "Kelas XI", "Kelas XII", "Lainnya"];
+            let kelasCount = [0, 0, 0, 0, 0, 0, 0];
+            jurnalF.forEach(j => {
+                let k = String(j.Kelas || "").toUpperCase();
+                if (k.includes("VIII") || k.includes("8")) kelasCount[1]++;
+                else if (k.includes("VII") || k.includes("7")) kelasCount[0]++;
+                else if (k.includes("IX") || k.includes("9")) kelasCount[2]++;
+                else if (k.includes("XII") || k.includes("12")) kelasCount[5]++;
+                else if (k.includes("XI") || k.includes("11")) kelasCount[4]++;
+                else if (k.includes("X") || k.includes("10")) kelasCount[3]++;
+                else kelasCount[6]++;
+            });
+            buatAtauUpdateChart("chartPerKelas", {
+                type: "bar",
+                data: { labels: kelasLabels, datasets: [{ label: "Sesi per Tingkat", data: kelasCount, backgroundColor: ["#10b981","#0d9488","#0284c7","#6366f1","#8b5cf6","#ec4899","#94a3b8"], borderRadius: 6 }] },
+                options: { responsive: true, maintainAspectRatio: false, animation: animOpt, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+            });
+
+            // Grafik 4A: Proporsi Jenis Layanan
+            let jenisMap = { "Praktikum di Lab": 0, "Pinjam ke Kelas": 0, "Pembinaan Olimpiade": 0, "Ekstrakurikuler": 0 };
+            jurnalF.forEach(j => { if (jenisMap[j.Jenis_Layanan] !== undefined) jenisMap[j.Jenis_Layanan]++; else jenisMap["Praktikum di Lab"]++; });
+            buatAtauUpdateChart("chartJenisLayanan", {
+                type: "pie",
+                data: { labels: Object.keys(jenisMap), datasets: [{ data: Object.values(jenisMap), backgroundColor: ["#059669","#f59e0b","#3b82f6","#8b5cf6"] }] },
+                options: { responsive: true, maintainAspectRatio: false, animation: animOpt, plugins: { title: { display: true, text: "Jenis Layanan", font: { size: 11 } }, legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 9 } } } } }
+            });
+
+            // Grafik 4B: Kelayakan Alat
+            let baikCnt = invF.filter(i => i.Kondisi === "Baik").length;
+            let rusakCnt = invF.length - baikCnt;
+            buatAtauUpdateChart("chartKelayakanAlat", {
+                type: "doughnut",
+                data: { labels: ["Baik", "Rusak"], datasets: [{ data: [baikCnt, rusakCnt], backgroundColor: ["#10b981","#ef4444"] }] },
+                options: { responsive: true, maintainAspectRatio: false, animation: animOpt, plugins: { title: { display: true, text: "Kelayakan Aset", font: { size: 11 } }, legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 9 } } } } }
+            });
+
+            // Grafik 5: Realisasi Program
+            let totalSesi = jurnalF.length > 0 ? jurnalF.length : jadwalF.length;
+            let targetSesi = parseInt(getSetting("Target_Sesi_Semester")) || 24;
+            let sisaTarget = Math.max(0, targetSesi - totalSesi);
+            buatAtauUpdateChart("chartRealisasiProgram", {
+                type: "doughnut",
+                data: { labels: ["Terlaksana", "Sisa Target"], datasets: [{ data: [totalSesi, sisaTarget], backgroundColor: ["#4f46e5","#e2e8f0"] }] },
+                options: { responsive: true, maintainAspectRatio: false, animation: animOpt, plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 10 } } } } }
+            });
+        }
+
+        // --- TTD KHUSUS DOKUMEN ADMINISTRASI (KEPALA MADRASAH + KEPALA LAB) ---
+        function getTTDLayananHtml() {
+            let isMTs = curUser.Unit === "MTs";
+            let namaKepLab = getSetting(isMTs ? "Kepala_Lab_MTs" : "Kepala_Lab_MA");
+            let namaKepMad = getSetting(isMTs ? "Kepala_Madrasah_MTs" : "Kepala_Madrasah_MA");
+            if (namaKepMad === "Nama Belum Diatur") namaKepMad = isMTs ? "Agung Hidayatullah, S.Sos.I." : "____________________";
+            let dateStr = formatDateStr(new Date().toISOString());
+            return `<table class="ttd-table" style="margin-top:35px;"><tr>
+                <td>Mengetahui,<br>Kepala Madrasah (${curUser.Unit})<br><br><br><br><br><span class="ttd-name">${namaKepMad}</span></td>
+                <td>Bandung, ${dateStr}<br>Kepala Laboratorium (${curUser.Unit})<br><br><br><br><br><span class="ttd-name">${namaKepLab}</span></td>
+            </tr></table>`;
+        }
+
+        // --- CETAK MASING-MASING BUKU / JURNAL ---
+        function cetakBukuLayanan(jenis) {
+            let { jurnalF, jadwalF, tamuF, logF, laporF } = kumpulkanDataLayanan();
+            let pLabel = document.getElementById("layananFilterPeriode").selectedOptions[0].text;
+            let tLabel = document.getElementById("layananFilterTahun").value;
+            let html = "";
+
+            if (jenis === "jurnal") {
+                html = `<h3 class="text-center" style="margin-bottom:4px;">BUKU / JURNAL LAYANAN LABORATORIUM IPA</h3><p class="text-center" style="margin-top:0;font-size:11px;">Periode: ${pLabel} (${tLabel})</p>
+                <table><thead><tr><th>No</th><th>Hari / Tanggal</th><th>Jam Ke-</th><th>Kelas</th><th>Mata Pelajaran / Topik Praktikum</th><th>Nama Guru Pengampu</th><th>Jml Siswa</th><th>Jenis Layanan</th><th>Kondisi Akhir / Catatan</th><th>Paraf Guru</th></tr></thead><tbody>`;
+                jurnalF.forEach((j, i) => {
+                    html += `<tr><td class="text-center">${i+1}</td><td>${formatHariTanggal(j.Tanggal)}</td><td class="text-center">${j.Jam_Ke}</td><td class="text-center">${j.Kelas}</td><td>${j.Mapel_Topik}</td><td>${j.Guru_Pengampu}</td><td class="text-center">${j.Jumlah_Siswa}</td><td>${j.Jenis_Layanan}</td><td>${j.Kondisi_Catatan || '-'}</td><td style="height:28px;"></td></tr>`;
+                });
+                if (jurnalF.length === 0) html += `<tr><td colspan="10" class="text-center">Belum ada catatan jurnal.</td></tr>`;
+                html += `</tbody></table>`;
+            } else if (jenis === "alat") {
+                html = `<h3 class="text-center" style="margin-bottom:4px;">BUKU PEMINJAMAN DAN PENGEMBALIAN ALAT</h3><p class="text-center" style="margin-top:0;font-size:11px;">Periode: ${pLabel} (${tLabel})</p>
+                <table><thead><tr><th>No</th><th>Tgl Pinjam &ndash; Kembali</th><th>Peminjam (Unit)</th><th>Spesifikasi &amp; Jumlah Alat</th><th>Keperluan</th><th>Kondisi Kembali</th></tr></thead><tbody>`;
+                let no = 0;
+                jadwalF.forEach(j => {
+                    let alat = (db.detail || []).filter(d => d.ID_Jadwal === j.ID_Jadwal).map(d => `${d.Nama_Barang} (${d.Jumlah})`).join(", ");
+                    if (!alat) return; no++;
+                    let lap = (db.laporan || []).find(l => l.ID_Jadwal === j.ID_Jadwal);
+                    html += `<tr><td class="text-center">${no}</td><td>${formatDateStr(j.Tgl_Mulai)} s.d ${formatDateStr(j.Tgl_Selesai)}</td><td>${j.Peminjam} (${j.Unit})</td><td>${alat}</td><td>${j.Keperluan}</td><td>${lap ? lap.Kondisi_Bahan_Alat : j.Status_Global}</td></tr>`;
+                });
+                if (no === 0) html += `<tr><td colspan="6" class="text-center">Belum ada data peminjaman alat.</td></tr>`;
+                html += `</tbody></table>`;
+            } else if (jenis === "bhp") {
+                html = `<h3 class="text-center" style="margin-bottom:4px;">JURNAL PENGGUNAAN BAHAN HABIS PAKAI (BHP)</h3><p class="text-center" style="margin-top:0;font-size:11px;">Periode: ${pLabel} (${tLabel})</p>
+                <table><thead><tr><th>No</th><th>Tanggal</th><th>Nama Bahan</th><th>Kepemilikan</th><th>Jumlah Digunakan</th><th>Sisa Stok</th><th>Pengguna / Keperluan</th></tr></thead><tbody>`;
+                let no = 0;
+                jadwalF.forEach(j => {
+                    (db.detail || []).filter(d => d.ID_Jadwal === j.ID_Jadwal).forEach(d => {
+                        let inv = (db.inventaris || []).find(i => i.ID_Barang === d.ID_Barang);
+                        if (inv && inv.Kategori === "Bahan") {
+                            no++;
+                            html += `<tr><td class="text-center">${no}</td><td>${formatDateStr(j.Tgl_Mulai)}</td><td>${d.Nama_Barang}</td><td class="text-center">${d.Kepemilikan}</td><td class="text-center">${d.Jumlah} ${inv.Satuan}</td><td class="text-center">${inv.Stok} ${inv.Satuan}</td><td>${j.Peminjam.split(" (")[0]} - ${j.Keperluan}</td></tr>`;
+                        }
+                    });
+                });
+                if (no === 0) html += `<tr><td colspan="7" class="text-center">Belum ada catatan penggunaan BHP.</td></tr>`;
+                html += `</tbody></table>`;
+            } else if (jenis === "insiden") {
+                html = `<h3 class="text-center" style="margin-bottom:4px;">BUKU CATATAN INSIDEN, KERUSAKAN &amp; PEMELIHARAAN (K3)</h3><p class="text-center" style="margin-top:0;font-size:11px;">Periode: ${pLabel} (${tLabel})</p>
+                <table><thead><tr><th>No</th><th>Tanggal</th><th>Jenis Catatan</th><th>Alat / Pelapor</th><th>Uraian &amp; Tindakan</th><th>Status</th></tr></thead><tbody>`;
+                let no = 0;
+                laporF.filter(l => l.Insiden_Kecelakaan && l.Insiden_Kecelakaan !== "Tidak Ada").forEach(l => {
+                    no++; html += `<tr><td class="text-center">${no}</td><td>${formatDateStr(l.Tanggal_Lapor)}</td><td>Insiden (${l.Insiden_Kecelakaan})</td><td>${l.Peminjam}</td><td>${l.Kronologi_Insiden || l.Kondisi_Bahan_Alat}</td><td>Dilaporkan</td></tr>`;
+                });
+                logF.forEach(p => {
+                    no++; html += `<tr><td class="text-center">${no}</td><td>${formatDateStr(p.Tanggal)}</td><td>${p.Jenis_Catatan}</td><td>${p.Nama_Alat} (${p.Unit})</td><td>${p.Deskripsi_Tindakan}</td><td>${p.Status}</td></tr>`;
+                });
+                if (no === 0) html += `<tr><td colspan="6" class="text-center">Nihil insiden dan kerusakan.</td></tr>`;
+                html += `</tbody></table>`;
+            } else if (jenis === "tamu") {
+                html = `<h3 class="text-center" style="margin-bottom:4px;">BUKU KUNJUNGAN / TAMU LABORATORIUM</h3><p class="text-center" style="margin-top:0;font-size:11px;">Periode: ${pLabel} (${tLabel})</p>
+                <table><thead><tr><th>No</th><th>Tanggal</th><th>Nama Pengunjung</th><th>Jabatan / Instansi</th><th>Keperluan</th><th>Kesan / Rekomendasi</th><th>Paraf</th></tr></thead><tbody>`;
+                tamuF.forEach((t, i) => {
+                    html += `<tr><td class="text-center">${i+1}</td><td>${formatDateStr(t.Tanggal)}</td><td>${t.Nama_Tamu}</td><td>${t.Instansi_Jabatan}</td><td>${t.Keperluan}</td><td>${t.Kesan_Pesan || '-'}</td><td style="height:28px;"></td></tr>`;
+                });
+                if (tamuF.length === 0) html += `<tr><td colspan="7" class="text-center">Belum ada catatan tamu.</td></tr>`;
+                html += `</tbody></table>`;
+            }
+            executePrint(html + getTTDLayananHtml());
+        }
+
+        // --- CETAK PAKET REKAP DATA + GRAFIK VISUALISASI (DISPLAY LAB / AKREDITASI) ---
+        function cetakPaketLayananLengkap() {
+            // Pastikan seluruh grafik telah dirender sebelum dikonversi ke PNG
+            renderGrafikLayanan(false);
+            setTimeout(() => {
+                let pLabel = document.getElementById("layananFilterPeriode").selectedOptions[0].text;
+                let tLabel = document.getElementById("layananFilterTahun").value;
+                let uLabel = document.getElementById("layananFilterUnit").value;
+
+                let img1 = silabCharts["chartSesiBulan"] ? silabCharts["chartSesiBulan"].toBase64Image() : "";
+                let img2 = silabCharts["chartTrenBulan"] ? silabCharts["chartTrenBulan"].toBase64Image() : "";
+                let img3 = silabCharts["chartPerKelas"] ? silabCharts["chartPerKelas"].toBase64Image() : "";
+                let img4 = silabCharts["chartKelayakanAlat"] ? silabCharts["chartKelayakanAlat"].toBase64Image() : "";
+                let img5 = silabCharts["chartRealisasiProgram"] ? silabCharts["chartRealisasiProgram"].toBase64Image() : "";
+
+                let html = `
+                    <h3 class="text-center" style="margin-bottom:4px;">LAPORAN DATA &amp; GRAFIK LAYANAN LABORATORIUM IPA</h3>
+                    <p class="text-center" style="margin-top:0;font-size:11px;">Periode: ${pLabel} | Tahun: ${tLabel} | Unit: ${uLabel}</p>
+                    <table>
+                        <thead><tr><th>Total Sesi Layanan</th><th>Keterlaksanaan Program</th><th>Total Siswa Terlayani</th><th>Kelayakan Aset</th></tr></thead>
+                        <tbody><tr>
+                            <td class="text-center"><b>${document.getElementById("kpiTotalSesi").textContent} Sesi</b></td>
+                            <td class="text-center"><b>${document.getElementById("kpiRealisasi").textContent}</b><br><small>${document.getElementById("kpiTargetInfo").textContent}</small></td>
+                            <td class="text-center"><b>${document.getElementById("kpiTotalSiswa").textContent} Siswa</b></td>
+                            <td class="text-center"><b>${document.getElementById("kpiKelayakan").textContent}</b><br><small>${document.getElementById("kpiKondisiInfo").textContent}</small></td>
+                        </tr></tbody>
+                    </table>
+                    <table style="border:none;">
+                        <tr>
+                            <td style="width:50%; text-align:center; padding:8px;"><b>1. Sesi Layanan per Bulan</b><br><img src="${img1}" style="width:100%; max-height:210px; object-fit:contain; margin-top:6px;"></td>
+                            <td style="width:50%; text-align:center; padding:8px;"><b>2. Tren Intensitas Layanan</b><br><img src="${img2}" style="width:100%; max-height:210px; object-fit:contain; margin-top:6px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="width:50%; text-align:center; padding:8px;"><b>3. Distribusi per Tingkat Kelas</b><br><img src="${img3}" style="width:100%; max-height:210px; object-fit:contain; margin-top:6px;"></td>
+                            <td style="width:50%; text-align:center; padding:8px;"><b>4. Kelayakan Aset &amp; Realisasi Program</b><br>
+                                <img src="${img4}" style="width:46%; max-height:170px; object-fit:contain; display:inline-block;">
+                                <img src="${img5}" style="width:46%; max-height:170px; object-fit:contain; display:inline-block;">
+                            </td>
+                        </tr>
+                    </table>
+                ` + getTTDLayananHtml();
+                executePrint(html);
+            }, 350);
+        }
     </script>
 </body>
 </html>
