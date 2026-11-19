@@ -101,7 +101,7 @@
                         <button class="tab-btn-admin px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600" onclick="switchAdminTab('tabJadwal', this)">Jadwal &amp; Otoritas</button>
                         <button class="tab-btn-admin px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600" onclick="switchAdminTab('tabLaporan', this)">Laporan Data</button>
                         <button class="tab-btn-admin px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600" onclick="switchAdminTab('tabLayanan', this); renderModulLayanan(true);">📊 Layanan &amp; Grafik</button>
-                        <button class="tab-btn-admin px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600" onclick="switchAdminTab('tabPengaturan', this)">⚙️ Pengaturan</button>
+                        <button class="tab-btn-admin px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600" onclick="switchAdminTab('tabPengaturan', this); populatePengaturanForm(true);">⚙️ Pengaturan</button>
                     </div>
                 </div>
             </div>
@@ -161,6 +161,7 @@
                                     <option value="2025">2025</option>
                                     <option value="2026" selected>2026</option>
                                     <option value="2027">2027</option>
+                                    <option value="2028">2028</option>
                                 </select>
                                 <select id="layananFilterUnit" onchange="renderModulLayanan(true)" class="border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold bg-slate-50 outline-none">
                                     <option value="Semua">Unit: Semua</option>
@@ -572,11 +573,11 @@
                                     </div>
                                 </div>
                                 <div class="flex gap-2 mb-6 overflow-x-auto pb-2 custom-scroll">
-                                    <button class="filter-btn active-filter bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold shrink-0" onclick="filterKategoriGuru('Semua')" type="button">Semua Kategori</button>
-                                    <button class="filter-btn bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold shrink-0" onclick="filterKategoriGuru('Ruangan')" type="button">Ruangan</button>
-                                    <button class="filter-btn bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold shrink-0" onclick="filterKategoriGuru('Barang')" type="button">Barang Umum</button>
-                                    <button class="filter-btn bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold shrink-0" onclick="filterKategoriGuru('Alat')" type="button">Alat</button>
-                                    <button class="filter-btn bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold shrink-0" onclick="filterKategoriGuru('Bahan')" type="button">Bahan</button>
+                                    <button class="filter-btn active-filter bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold shrink-0" onclick="filterKategoriGuru('Semua', this)" type="button">Semua Kategori</button>
+                                    <button class="filter-btn bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold shrink-0" onclick="filterKategoriGuru('Ruangan', this)" type="button">Ruangan</button>
+                                    <button class="filter-btn bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold shrink-0" onclick="filterKategoriGuru('Barang', this)" type="button">Barang Umum</button>
+                                    <button class="filter-btn bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold shrink-0" onclick="filterKategoriGuru('Alat', this)" type="button">Alat</button>
+                                    <button class="filter-btn bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold shrink-0" onclick="filterKategoriGuru('Bahan', this)" type="button">Bahan</button>
                                 </div>
                                 <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="guruKatalog"></div>
                             </div>
@@ -721,28 +722,68 @@
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         
         let curUser = null; 
-        let db = { inventaris: [], jadwal: [], detail: [], laporan: [], tanggungan: [], usulan: [], pengaturan: [], akun_wa: [] }; 
+        let db = { inventaris: [], jadwal: [], detail: [], laporan: [], tanggungan: [], usulan: [], pengaturan: [], akun_wa: [], jurnal: [], tamu: [], pemeliharaan: [] }; 
         let cart = []; 
         let currentKatFilter = "Semua"; 
         let syncInterval;
+        let pengaturanLoadedOnce = false;
+
+        // FUNGSI PARSING TANGGAL AMAN (ISO UTC, YYYY-MM-DD, DAN DD/MM/YYYY ID)
+        function parseDateSafe(dateVal) {
+            if (!dateVal) return null;
+            if (dateVal instanceof Date) return isNaN(dateVal.getTime()) ? null : dateVal;
+            let s = String(dateVal).trim();
+            if (!s) return null;
+            // Format YYYY-MM-DD (input type date) -> parse lokal agar tidak geser timezone
+            let mIsoDate = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (mIsoDate) return new Date(parseInt(mIsoDate[1]), parseInt(mIsoDate[2]) - 1, parseInt(mIsoDate[3]));
+            // Format DD/MM/YYYY atau D/M/YYYY (dari toLocaleDateString('id-ID'))
+            let mIdDate = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (mIdDate) return new Date(parseInt(mIdDate[3]), parseInt(mIdDate[2]) - 1, parseInt(mIdDate[1]));
+            // ISO String lengkap (misal 2026-10-01T17:00:00.000Z)
+            let d = new Date(s);
+            return isNaN(d.getTime()) ? null : d;
+        }
+
+        // KONVERSI KE FORMAT INPUT DATE (YYYY-MM-DD LOKAL)
+        function toInputDateValue(dateVal) {
+            let d = parseDateSafe(dateVal);
+            if (!d) return "";
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
 
         // FUNGSI PERBAIKAN TANGGAL
         function formatDateStr(dateStr) {
             if(!dateStr) return "-";
             try {
-                let d = new Date(dateStr);
-                if(isNaN(d.getTime())) return dateStr;
+                let d = parseDateSafe(dateStr);
+                if(!d) return String(dateStr);
                 let months = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
                 return d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear();
-            } catch(e) { return dateStr; }
+            } catch(e) { return String(dateStr); }
+        }
+
+        // FUNGSI PERBAIKAN JAM (MENGATASI ISO 1899-12-30T...Z DARI GOOGLE SHEETS)
+        function formatTimeStr(timeVal) {
+            if (!timeVal) return "-";
+            let s = String(timeVal).trim();
+            let mClock = s.match(/^(\d{1,2}):(\d{2})/);
+            if (mClock) return `${String(mClock[1]).padStart(2, '0')}:${mClock[2]}`;
+            if (s.includes("T")) {
+                let d = new Date(s);
+                if (!isNaN(d.getTime())) {
+                    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                }
+            }
+            return s;
         }
 
         // FUNGSI MENCARI NOMOR WA
         function getWA(peminjamName) {
-            let realName = peminjamName.split(" (")[0];
-            let u = db.akun_wa.find(x => x.nama === realName);
+            let realName = String(peminjamName || "").split(" (")[0];
+            let u = (db.akun_wa || []).find(x => x.nama === realName);
             if(u && u.wa) {
-                let no = u.wa.toString();
+                let no = u.wa.toString().replace(/\D/g, '');
                 if(no.startsWith('0')) return '62' + no.substring(1);
                 return no;
             }
@@ -790,7 +831,7 @@
                 let res = await fetchAPI({action: "getAllData"});
                 if (res.status === "success") {
                     db = res.data;
-                    populatePengaturanForm(); 
+                    populatePengaturanForm(false); 
                     if (curUser.Role === "Admin") { 
                         renderAdminDashboard(); renderListACC(); renderLaporanAdmin(); 
                         renderTabelJadwalAktif("tabelJadwalAktifAdmin"); renderGridCalendar("adminCalendarGrid");
@@ -804,18 +845,39 @@
         }
 
         // --- SISTEM PENGATURAN (SETTINGS) ---
-        function getSetting(kunci) { let s = db.pengaturan.find(p => p.Kunci === kunci); return s ? s.Nilai : "Nama Belum Diatur"; }
-        function populatePengaturanForm() {
+        function getSetting(kunci) { let s = (db.pengaturan || []).find(p => p.Kunci === kunci); return s ? s.Nilai : "Nama Belum Diatur"; }
+        function populatePengaturanForm(force = false) {
+            let tabSet = document.getElementById("tabPengaturan");
+            // Cegah overwrite saat Admin sedang mengetik di tab Pengaturan saat Live Sync 15 detik berjalan
+            if (!force && pengaturanLoadedOnce && tabSet && !tabSet.classList.contains("hidden")) return;
             if(document.getElementById("setKepalaMTs")) {
-                document.getElementById("setKepalaMTs").value = getSetting("Kepala_Lab_MTs") !== "Nama Belum Diatur" ? getSetting("Kepala_Lab_MTs") : "Agni Guntur Sugito, S.Pd";
+                document.getElementById("setKepalaMTs").value = getSetting("Kepala_Lab_MTs") !== "Nama Belum Diatur" ? getSetting("Kepala_Lab_MTs") : "Agni Guntur Sugito, S.P.";
                 document.getElementById("setKepalaMA").value = getSetting("Kepala_Lab_MA") !== "Nama Belum Diatur" ? getSetting("Kepala_Lab_MA") : "Ajang Romana, S.Pd";
             }
+            if (document.getElementById("setKepmadMTs")) {
+                let kmMts = getSetting("Kepala_Madrasah_MTs");
+                let kmMa = getSetting("Kepala_Madrasah_MA");
+                let targetS = getSetting("Target_Sesi_Semester");
+                document.getElementById("setKepmadMTs").value = kmMts !== "Nama Belum Diatur" ? kmMts : "Agung Hidayatullah, S.Sos.I.";
+                document.getElementById("setKepmadMA").value = kmMa !== "Nama Belum Diatur" ? kmMa : "Kepala Madrasah MA";
+                document.getElementById("setTargetSesi").value = targetS !== "Nama Belum Diatur" ? targetS : "24";
+            }
+            pengaturanLoadedOnce = true;
         }
         async function simpanPengaturan(e) {
             e.preventDefault();
             let btn = document.getElementById("btnSimpanPengaturan"); let ot = btn.textContent; btn.textContent = "Menyimpan..."; btn.disabled = true;
-            let res = await fetchAPI({ action: "simpanPengaturan", kepala_mts: document.getElementById("setKepalaMTs").value, kepala_ma: document.getElementById("setKepalaMA").value });
-            alert(res.message); await loadAllDataSilently();
+            let res = await fetchAPI({
+                action: "simpanPengaturan",
+                kepala_mts: document.getElementById("setKepalaMTs").value,
+                kepala_ma: document.getElementById("setKepalaMA").value,
+                kepala_madrasah_mts: document.getElementById("setKepmadMTs") ? document.getElementById("setKepmadMTs").value : "",
+                kepala_madrasah_ma: document.getElementById("setKepmadMA") ? document.getElementById("setKepmadMA").value : "",
+                target_sesi: document.getElementById("setTargetSesi") ? document.getElementById("setTargetSesi").value : "24"
+            });
+            alert(res.message);
+            await loadAllDataSilently();
+            populatePengaturanForm(true);
             btn.textContent = ot; btn.disabled = false;
         }
 
@@ -875,17 +937,20 @@
             let daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
             let firstDayIndex = new Date(currentYear, currentMonth, 1).getDay(); 
             
-            let html = `<div class="text-center font-bold text-emerald-800 mb-2 border-b pb-2">${monthNames[currentMonth]}${currentYear}</div><div class="grid grid-cols-7 gap-1 md:gap-2 text-center text-[10px] md:text-xs">`;
+            let html = `<div class="text-center font-bold text-emerald-800 mb-2 border-b pb-2">${monthNames[currentMonth]} ${currentYear}</div><div class="grid grid-cols-7 gap-1 md:gap-2 text-center text-[10px] md:text-xs">`;
             ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].forEach(d => html += `<div class="font-bold text-slate-500 py-1 bg-slate-100 rounded">${d}</div>`);
             for(let i=0; i<firstDayIndex; i++) { html += `<div class="p-1 md:p-2 bg-transparent"></div>`; }
             
             for(let i=1; i<=daysInMonth; i++) {
                 let loopDate = new Date(currentYear, currentMonth, i);
                 
-                let events = db.jadwal.filter(j => {
+                let events = (db.jadwal || []).filter(j => {
                     if (j.Status_Global !== 'Disetujui' && j.Status_Global !== 'Menunggu Pembatalan') return false;
-                    let dStart = new Date(j.Tgl_Mulai); dStart.setHours(0,0,0,0);
-                    let dEnd = new Date(j.Tgl_Selesai); dEnd.setHours(23,59,59,999);
+                    let dStart = parseDateSafe(j.Tgl_Mulai);
+                    if (!dStart) return false;
+                    dStart.setHours(0,0,0,0);
+                    let dEnd = parseDateSafe(j.Tgl_Selesai) || new Date(dStart.getTime());
+                    dEnd.setHours(23,59,59,999);
                     return loopDate >= dStart && loopDate <= dEnd;
                 });
                 
@@ -894,9 +959,10 @@
                 
                 let eventHtml = '';
                 events.forEach(e => {
-                    let isMine = (e.Peminjam.includes(curUser.Nama_Lengkap)); 
+                    let peminjamStr = String(e.Peminjam || "");
+                    let isMine = peminjamStr.includes(curUser.Nama_Lengkap); 
                     let color = isMine ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700';
-                    eventHtml += `<div class="${color} text-[8px] md:text-[9px] p-1 mt-1 rounded truncate leading-tight shadow-sm" title="${e.Peminjam} - ${e.Keperluan}">${e.Peminjam.split(" ")[0]}</div>`;
+                    eventHtml += `<div class="${color} text-[8px] md:text-[9px] p-1 mt-1 rounded truncate leading-tight shadow-sm" title="${peminjamStr} - ${e.Keperluan}">${peminjamStr.split(" ")[0]}</div>`;
                 });
                 
                 html += `<div class="border rounded-lg p-1 md:p-1.5 min-h-[60px] md:min-h-[80px] text-left overflow-hidden ${todayClass} hover:shadow-md transition-shadow"><div class="font-bold text-slate-700 text-xs ${isToday?'text-emerald-700':''}">${i}</div>${eventHtml}</div>`;
@@ -911,58 +977,66 @@
             let searchQ = document.getElementById("searchAdminInv").value.toLowerCase(); let sortBy = document.getElementById("sortAdminInv").value;
             let filterMilik = document.getElementById("filterMilikAdmin").value;
             
-            let filtered = db.inventaris;
+            let filtered = (db.inventaris || []).slice();
             if(filterMilik !== "Semua") filtered = filtered.filter(i => i.Kepemilikan === filterMilik);
             
-            filtered = filtered.filter(i => i.Nama_Barang.toLowerCase().includes(searchQ) || i.Kategori.toLowerCase().includes(searchQ));
-            filtered.sort((a, b) => { if (sortBy === 'nama_az') return a.Nama_Barang.localeCompare(b.Nama_Barang); if (sortBy === 'tgl_baru') return new Date(b.Tanggal_Beli || '1970-01-01').getTime() - new Date(a.Tanggal_Beli || '1970-01-01').getTime(); return 0; });
+            filtered = filtered.filter(i => String(i.Nama_Barang || "").toLowerCase().includes(searchQ) || String(i.Kategori || "").toLowerCase().includes(searchQ));
+            filtered.sort((a, b) => {
+                if (sortBy === 'nama_az') return String(a.Nama_Barang || "").localeCompare(String(b.Nama_Barang || ""));
+                if (sortBy === 'tgl_baru') {
+                    let tA = parseDateSafe(a.Tanggal_Beli)?.getTime() || 0;
+                    let tB = parseDateSafe(b.Tanggal_Beli)?.getTime() || 0;
+                    return tB - tA;
+                }
+                return 0;
+            });
 
             filtered.forEach(item => {
                 let badge = item.Kepemilikan === 'MTs' ? 'bg-blue-100 text-blue-700' : (item.Kepemilikan === 'MA' ? 'bg-purple-100 text-purple-700' : 'bg-slate-200 text-slate-700');
                 let imgTag = item.URL_Gambar ? `<img src="${item.URL_Gambar}" class="w-12 h-12 object-cover rounded-xl border shadow-sm">` : `<div class="w-12 h-12 bg-slate-100 text-[9px] flex items-center justify-center text-slate-400 rounded-xl border border-dashed">No Foto</div>`;
                 let btnAksi = `<div class="flex flex-col gap-1 items-end"><button onclick="editBarang('${item.ID_Barang}')" class="text-blue-600 hover:bg-blue-50 font-bold text-[11px] px-3 py-1 rounded">Edit</button><button onclick="hapusBarang('${item.ID_Barang}')" class="text-red-600 hover:bg-red-50 font-bold text-[11px] px-3 py-1 rounded">Hapus</button></div>`;
                 let dFmt = formatDateStr(item.Tanggal_Beli);
-                tbody.innerHTML += `<tr class="border-b hover:bg-slate-50"><td class="p-4 w-20">${imgTag}</td><td class="p-4"><div class="font-bold text-sm">${item.Nama_Barang}</div><div class="text-[10px] text-slate-500 mt-1"><span class="bg-slate-100 border px-1 rounded uppercase font-bold">${item.Kategori}</span> Beli:${dFmt}</div></td><td class="p-4 text-center"><div class="font-black text-lg">${item.Stok} <span class="text-xs font-normal">${item.Satuan}</span></div><span class="px-2 py-0.5 rounded-md text-[10px] font-bold mt-1 inline-block border ${badge}">${item.Kepemilikan}</span></td><td class="p-4 text-right">${btnAksi}</td></tr>`;
+                tbody.innerHTML += `<tr class="border-b hover:bg-slate-50"><td class="p-4 w-20">${imgTag}</td><td class="p-4"><div class="font-bold text-sm">${item.Nama_Barang}</div><div class="text-[10px] text-slate-500 mt-1"><span class="bg-slate-100 border px-1 rounded uppercase font-bold">${item.Kategori}</span> Beli: ${dFmt}</div></td><td class="p-4 text-center"><div class="font-black text-lg">${item.Stok} <span class="text-xs font-normal">${item.Satuan}</span></div><span class="px-2 py-0.5 rounded-md text-[10px] font-bold mt-1 inline-block border ${badge}">${item.Kepemilikan}</span></td><td class="p-4 text-right">${btnAksi}</td></tr>`;
             });
         }
 
         // --- SISTEM ACC & PEMBATALAN ADMIN ---
         function renderListACC() {
             let container = document.getElementById("listPengajuanJadwal"); container.innerHTML = "";
-            let antrean = db.jadwal.filter(j => j["ACC_"+curUser.Unit] === "Menunggu" && j.Status_Global !== "Dibatalkan");
+            let antrean = (db.jadwal || []).filter(j => j["ACC_"+curUser.Unit] === "Menunggu" && j.Status_Global !== "Dibatalkan");
             if(document.getElementById("badgeACC")) document.getElementById("badgeACC").textContent = antrean.length;
             if(antrean.length === 0) return container.innerHTML = "<div class='col-span-full p-8 text-center bg-slate-50 border border-dashed rounded-2xl text-slate-400 font-medium'>🎉 Semua pengajuan telah direspons.</div>";
             antrean.forEach(jdwl => {
-                let pinjamAlat = db.detail.filter(d => d.ID_Jadwal === jdwl.ID_Jadwal).map(d => `${d.Nama_Barang} (x${d.Jumlah})`).join(", ");
+                let pinjamAlat = (db.detail || []).filter(d => d.ID_Jadwal === jdwl.ID_Jadwal).map(d => `${d.Nama_Barang} (x${d.Jumlah})`).join(", ");
                 let waIcon = ""; let waNum = getWA(jdwl.Peminjam);
                 if(waNum) waIcon = `<a href="https://wa.me/${waNum}" target="_blank" title="Chat WA" class="text-green-500 ml-1">💬</a>`;
 
-                container.innerHTML += `<div class="bg-white p-5 border border-slate-200 rounded-2xl flex flex-col justify-between h-full shadow-sm"><div class="mb-4"><div class="inline-block bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-md mb-2">Butuh ACC ${curUser.Unit}</div><h4 class="font-bold text-sm">${jdwl.Keperluan}</h4><div class="text-[11px] text-slate-500 mt-2"><p>🧑‍🏫 <b>${jdwl.Peminjam}</b>${waIcon}</p><p>🕒 ${formatDateStr(jdwl.Tgl_Mulai)} s.d ${formatDateStr(jdwl.Tgl_Selesai)}</p><p class="mt-1">Pukul: ${jdwl.Jam_Mulai} -${jdwl.Jam_Selesai}</p></div><div class="text-[10px] text-slate-600 bg-slate-50 border p-2 rounded-lg mt-3 font-medium">📦 ${pinjamAlat || 'Hanya Ruangan'}</div></div><div class="flex gap-2 mt-auto pt-4 border-t"><button onclick="prosesACC('${jdwl.ID_Jadwal}', 'Disetujui')" class="flex-1 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-600 hover:text-white py-2 rounded-xl text-xs font-bold transition-all">Setujui</button><button onclick="prosesACC('${jdwl.ID_Jadwal}', 'Ditolak')" class="flex-1 bg-red-50 text-red-700 border border-red-200 hover:bg-red-600 hover:text-white py-2 rounded-xl text-xs font-bold transition-all">Tolak</button></div></div>`;
+                container.innerHTML += `<div class="bg-white p-5 border border-slate-200 rounded-2xl flex flex-col justify-between h-full shadow-sm"><div class="mb-4"><div class="inline-block bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-md mb-2">Butuh ACC ${curUser.Unit}</div><h4 class="font-bold text-sm">${jdwl.Keperluan}</h4><div class="text-[11px] text-slate-500 mt-2"><p>🧑‍🏫 <b>${jdwl.Peminjam}</b> ${waIcon}</p><p>🕒 ${formatDateStr(jdwl.Tgl_Mulai)} s.d ${formatDateStr(jdwl.Tgl_Selesai)}</p><p class="mt-1">Pukul: ${formatTimeStr(jdwl.Jam_Mulai)} - ${formatTimeStr(jdwl.Jam_Selesai)}</p></div><div class="text-[10px] text-slate-600 bg-slate-50 border p-2 rounded-lg mt-3 font-medium">📦 ${pinjamAlat || 'Hanya Ruangan'}</div></div><div class="flex gap-2 mt-auto pt-4 border-t"><button onclick="prosesACC('${jdwl.ID_Jadwal}', 'Disetujui')" class="flex-1 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-600 hover:text-white py-2 rounded-xl text-xs font-bold transition-all">Setujui</button><button onclick="prosesACC('${jdwl.ID_Jadwal}', 'Ditolak')" class="flex-1 bg-red-50 text-red-700 border border-red-200 hover:bg-red-600 hover:text-white py-2 rounded-xl text-xs font-bold transition-all">Tolak</button></div></div>`;
             });
         }
         async function prosesACC(id, status) { if(!confirm(`Beri status "${status}"?`)) return; let res = await fetchAPI({ action: "accPeminjaman", id_jadwal: id, admin_unit: curUser.Unit, keputusan: status }); if (res.status === "success") { await loadAllDataSilently(); } }
 
         function renderTabelJadwalAktif(tabelId) {
             let tbody = document.getElementById(tabelId); if(!tbody) return; tbody.innerHTML = "";
-            let jadwalAktif = db.jadwal.filter(j => j.Status_Global === "Disetujui" || j.Status_Global === "Menunggu Pembatalan");
-            jadwalAktif.sort((a,b) => new Date(a.Tgl_Mulai) - new Date(b.Tgl_Mulai));
+            let jadwalAktif = (db.jadwal || []).filter(j => j.Status_Global === "Disetujui" || j.Status_Global === "Menunggu Pembatalan");
+            jadwalAktif.sort((a,b) => (parseDateSafe(a.Tgl_Mulai)?.getTime() || 0) - (parseDateSafe(b.Tgl_Mulai)?.getTime() || 0));
             if(jadwalAktif.length === 0) return tbody.innerHTML = "<tr><td colspan='3' class='p-6 text-center text-slate-400 italic bg-white'>Belum ada jadwal disetujui.</td></tr>";
             
             jadwalAktif.forEach(j => {
-                let pinjamAlat = db.detail.filter(d => d.ID_Jadwal === j.ID_Jadwal).map(d => `${d.Nama_Barang}`).join(", ") || 'Hanya Ruangan';
+                let pinjamAlat = (db.detail || []).filter(d => d.ID_Jadwal === j.ID_Jadwal).map(d => `${d.Nama_Barang}`).join(", ") || 'Hanya Ruangan';
                 let aksi = ""; let isReqCancel = j.Status_Global === "Menunggu Pembatalan";
                 
                 if (curUser.Role === "Admin") { 
                     aksi = isReqCancel ? `<button onclick="accBatalAdmin('${j.ID_Jadwal}')" class="bg-red-500 text-white px-2 py-1 rounded text-[10px] font-bold animate-pulse">Setujui Batal</button>` : `<button onclick="bukaModalBatal('${j.ID_Jadwal}', 'Admin')" class="border border-red-200 text-red-500 hover:bg-red-50 px-2 py-1 rounded text-[10px] font-bold">Batalkan</button>`; 
                     let waNum = getWA(j.Peminjam);
                     if(waNum) {
-                        let textMsg = `Halo ${j.Peminjam.split(" (")[0]}, waktu peminjaman lab/alat Anda telah habis. Mohon segera mengembalikan alat dan mengisi laporan pasca praktikum di sistem SI-LAB.`;
+                        let textMsg = `Halo ${String(j.Peminjam || "").split(" (")[0]}, waktu peminjaman lab/alat Anda telah habis. Mohon segera mengembalikan alat dan mengisi laporan pasca praktikum di sistem SI-LAB.`;
                         aksi += `<a href="https://wa.me/${waNum}?text=${encodeURIComponent(textMsg)}" target="_blank" class="bg-green-500 text-white px-2 py-1 rounded text-[10px] font-bold ml-1 mt-1 inline-block hover:bg-green-600 transition-colors">💬 Ingatkan WA</a>`;
                     }
                 }
                 
                 let warningCancel = isReqCancel ? `<div class="mt-1 text-[9px] text-red-500 font-bold">*Dalam proses pembatalan</div>` : ``;
-                tbody.innerHTML += `<tr class="border-b bg-white hover:bg-slate-50"><td class="p-3"><div class="font-bold text-sm text-slate-800">${formatDateStr(j.Tgl_Mulai)}<br><span class="text-[10px] font-normal text-slate-500">s.d ${formatDateStr(j.Tgl_Selesai)}</span></div><div class="text-[10px] text-slate-500 mt-0.5">Pukul: ${j.Jam_Mulai} - ${j.Jam_Selesai}</div><div class="text-[11px] mt-2 font-medium text-emerald-700">🧑‍🏫 ${j.Peminjam.split(" (")[0]}</div></td><td class="p-3"><div class="text-xs font-bold text-slate-700 mb-1">${j.Keperluan}</div><div class="text-[10px] text-slate-500 bg-slate-50 p-1.5 border rounded">📦 ${pinjamAlat}</div>${warningCancel}</td><td class="p-3 text-right align-middle">${aksi}</td></tr>`;
+                tbody.innerHTML += `<tr class="border-b bg-white hover:bg-slate-50"><td class="p-3"><div class="font-bold text-sm text-slate-800">${formatDateStr(j.Tgl_Mulai)}<br><span class="text-[10px] font-normal text-slate-500">s.d ${formatDateStr(j.Tgl_Selesai)}</span></div><div class="text-[10px] text-slate-500 mt-0.5">Pukul: ${formatTimeStr(j.Jam_Mulai)} - ${formatTimeStr(j.Jam_Selesai)}</div><div class="text-[11px] mt-2 font-medium text-emerald-700">🧑‍🏫 ${String(j.Peminjam || "").split(" (")[0]}</div></td><td class="p-3"><div class="text-xs font-bold text-slate-700 mb-1">${j.Keperluan}</div><div class="text-[10px] text-slate-500 bg-slate-50 p-1.5 border rounded">📦 ${pinjamAlat}</div>${warningCancel}</td><td class="p-3 text-right align-middle">${aksi}</td></tr>`;
             });
         }
 
@@ -972,26 +1046,31 @@
 
         function renderLaporanAdmin() {
             let contL = document.getElementById("listLaporanSatuan"); contL.innerHTML = "";
-            if(db.laporan.length === 0) contL.innerHTML = "<p class='text-xs text-slate-400'>Belum ada laporan masuk.</p>";
-            db.laporan.slice().reverse().forEach(l => {
+            if(!db.laporan || db.laporan.length === 0) contL.innerHTML = "<p class='text-xs text-slate-400'>Belum ada laporan masuk.</p>";
+            (db.laporan || []).slice().reverse().forEach(l => {
                 let badgeIns = l.Insiden_Kecelakaan !== "Tidak Ada" ? `<span class="text-[9px] bg-red-100 text-red-600 px-1 rounded font-bold uppercase ml-1">Insiden</span>` : '';
-                let tglFormat = formatDateStr(l.Tanggal_Lapor); // Fix bug ISO Date
-                contL.innerHTML += `<div class="bg-white p-3 rounded-xl shadow-sm border mb-2 flex justify-between items-center"><div><div class="text-xs font-bold text-slate-800">${l.Peminjam.split(" (")[0]} ${badgeIns}</div><div class="text-[10px] text-slate-500 mt-1">${tglFormat}</div></div><button onclick="cetakLaporanSatuan('${l.ID_Laporan}')" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white border px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors">🖨️ Cetak</button></div>`;
+                let tglFormat = formatDateStr(l.Tanggal_Lapor);
+                contL.innerHTML += `<div class="bg-white p-3 rounded-xl shadow-sm border mb-2 flex justify-between items-center"><div><div class="text-xs font-bold text-slate-800">${String(l.Peminjam || "").split(" (")[0]} ${badgeIns}</div><div class="text-[10px] text-slate-500 mt-1">${tglFormat}</div></div><button onclick="cetakLaporanSatuan('${l.ID_Laporan}')" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white border px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors">🖨️ Cetak</button></div>`;
             });
             
             let contH = document.getElementById("listTanggungan"); contH.innerHTML = "";
             let hasTanggungan = false;
-            db.tanggungan.forEach(t => { 
+            (db.tanggungan || []).forEach(t => { 
                 if(t.Status_GantiRugi === "Belum Diganti") {
                     hasTanggungan = true;
                     let btnLunas = (curUser.Unit === t.Memakai_Milik || t.Memakai_Milik === "Bersama") 
-                        ? `<button onclick="lunasiTanggungan('${t.ID_Tanggungan}')" class="mt-3 w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-xl text-[10px] font-bold shadow-sm transition-all">✅ Lunas & Restock</button>`
+                        ? `<button onclick="lunasiTanggungan('${t.ID_Tanggungan}')" class="mt-3 w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-xl text-[10px] font-bold shadow-sm transition-all">✅ Lunas &amp; Restock</button>`
                         : `<div class="mt-3 text-[10px] text-amber-600 font-bold bg-amber-50 p-2 rounded-xl text-center border border-amber-100">Menunggu Admin ${t.Memakai_Milik}</div>`;
                     let dFmt = formatDateStr(t.Tanggal);
-                    contH.innerHTML += `<div class="bg-white border-l-4 border-red-500 p-4 rounded-2xl shadow-sm text-xs mb-3 transition-transform hover:-translate-y-1"><div class="flex justify-between items-start mb-1"><span class="font-bold text-slate-800">${t.Peminjam.split(" ")[0]} (${t.Unit_Peminjam})</span><span class="text-[9px] text-slate-400">${dFmt}</span></div><div>Berhutang <span class="font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded">${t.Jumlah_Rusak_Habis} unit ${t.Nama_Barang}</span> ke <b>${t.Memakai_Milik}</b>.</div>${btnLunas}</div>`; 
+                    contH.innerHTML += `<div class="bg-white border-l-4 border-red-500 p-4 rounded-2xl shadow-sm text-xs mb-3 transition-transform hover:-translate-y-1"><div class="flex justify-between items-start mb-1"><span class="font-bold text-slate-800">${String(t.Peminjam || "").split(" ")[0]} (${t.Unit_Peminjam})</span><span class="text-[9px] text-slate-400">${dFmt}</span></div><div>Berhutang <span class="font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded">${t.Jumlah_Rusak_Habis} unit ${t.Nama_Barang}</span> ke <b>${t.Memakai_Milik}</b>.</div>${btnLunas}</div>`; 
                 } 
             });
             if(!hasTanggungan) contH.innerHTML = `<div class="p-6 bg-emerald-50/50 border border-emerald-100 rounded-2xl text-center"><span class="text-2xl block mb-2">🎉</span><p class="text-xs text-emerald-700 font-bold">Tidak ada tanggungan aktif saat ini.</p></div>`;
+
+            // Sinkronisasi modul layanan V15 di latar belakang
+            if (curUser && curUser.Role === "Admin") {
+                renderModulLayanan(false);
+            }
         }
 
         async function lunasiTanggungan(id_tanggungan) {
@@ -1012,13 +1091,13 @@
         function bukaModalBarang(item) {
             document.getElementById("modalBarang").classList.remove("hidden");
             if(item) { 
-                document.getElementById("modalTitle").textContent = "Edit Detail Aset"; document.getElementById("invMode").value = "edit"; document.getElementById("invID").value = item.ID_Barang; document.getElementById("invNama").value = item.Nama_Barang; document.getElementById("invMilik").value = item.Kepemilikan; document.getElementById("invKategori").value = item.Kategori; document.getElementById("invStok").value = item.Stok; document.getElementById("invSatuan").value = item.Satuan; document.getElementById("invKondisi").value = item.Kondisi; document.getElementById("invTglBeli").value = item.Tanggal_Beli ? item.Tanggal_Beli.substring(0,10) : ""; document.getElementById("invUrlGambar").value = item.URL_Gambar || ""; 
+                document.getElementById("modalTitle").textContent = "Edit Detail Aset"; document.getElementById("invMode").value = "edit"; document.getElementById("invID").value = item.ID_Barang; document.getElementById("invNama").value = item.Nama_Barang; document.getElementById("invMilik").value = item.Kepemilikan; document.getElementById("invKategori").value = item.Kategori; document.getElementById("invStok").value = item.Stok; document.getElementById("invSatuan").value = item.Satuan; document.getElementById("invKondisi").value = item.Kondisi; document.getElementById("invTglBeli").value = toInputDateValue(item.Tanggal_Beli); document.getElementById("invUrlGambar").value = item.URL_Gambar || ""; 
             } else { 
                 document.getElementById("formBarang").reset(); document.getElementById("modalTitle").textContent = "Registrasi Aset Baru"; document.getElementById("invMode").value = "add"; document.getElementById("invID").value = "BRG-" + new Date().getTime(); document.getElementById("invMilik").value = curUser.Unit; document.getElementById("invUrlGambar").value = "";
             }
         }
 
-        function editBarang(id) { let item = db.inventaris.find(i => i.ID_Barang === id); if(item) bukaModalBarang(item); }
+        function editBarang(id) { let item = (db.inventaris || []).find(i => i.ID_Barang === id); if(item) bukaModalBarang(item); }
 
         async function simpanBarang(e) { 
             e.preventDefault(); let btn = document.getElementById("btnSimpanBarang"); let oText = btn.textContent; btn.textContent = "Menyimpan..."; btn.disabled = true; 
@@ -1034,7 +1113,10 @@
         // --- SISTEM CETAK PROFESIONAL ---
         function executePrint(htmlBodyContent) {
             let printWindow = window.open('', '_blank', 'height=800,width=800');
-            // CSS CETAK PROFESIONAL
+            if (!printWindow) {
+                alert("Pop-up cetak diblokir oleh browser Anda. Mohon izinkan pop-up untuk situs ini agar dokumen dapat dicetak.");
+                return;
+            }
             let cssPrint = `
                 <style>
                     body { font-family: 'Times New Roman', Times, serif; padding: 20px; color: #000; line-height: 1.5; font-size: 12px;}
@@ -1047,7 +1129,7 @@
                     th { background-color: #f2f2f2; font-weight: bold; text-align: center; text-transform: uppercase; }
                     .text-center { text-align: center; }
                     .ttd-container { width: 100%; margin-top: 40px; page-break-inside: avoid; border: none !important; }
-                    .ttd-table { width: 100%; border: none !important; }
+                    .ttd-table { width: 100%; border: none !important; page-break-inside: avoid; }
                     .ttd-table td { border: none !important; text-align: center; width: 50%; vertical-align: bottom; height: 100px; padding: 0;}
                     .ttd-name { font-weight: bold; text-decoration: underline; }
                 </style>`;
@@ -1073,7 +1155,7 @@
 
             if(peminjam) {
                 return `<table class="ttd-table"><tr>
-                        <td>Pelapor / Praktikan<br><br><br><br><br><span class="ttd-name">${peminjam.split(" (")[0]}</span></td>
+                        <td>Pelapor / Praktikan<br><br><br><br><br><span class="ttd-name">${String(peminjam).split(" (")[0]}</span></td>
                         <td>Mengetahui,<br>${titleAdminTertanda}<br><br><br><br><br><span class="ttd-name">${namaAdminTertanda}</span></td>
                     </tr></table>`;
             }
@@ -1089,17 +1171,17 @@
             if(jenis === 'inventaris') {
                 subtitle = "<h3 class='text-center'>LAPORAN REKAPITULASI INVENTARIS ASET</h3>";
                 html = `<table><thead><tr><th>No</th><th>Nama Barang</th><th>Kategori</th><th>Milik</th><th>Stok</th><th>Kondisi</th><th>Tgl Beli</th></tr></thead><tbody>`;
-                db.inventaris.forEach((i, idx) => { html += `<tr><td class="text-center">${idx+1}</td><td>${i.Nama_Barang}</td><td class="text-center">${i.Kategori}</td><td class="text-center">${i.Kepemilikan}</td><td class="text-center">${i.Stok} ${i.Satuan}</td><td class="text-center">${i.Kondisi}</td><td class="text-center">${formatDateStr(i.Tanggal_Beli)}</td></tr>`; });
+                (db.inventaris || []).forEach((i, idx) => { html += `<tr><td class="text-center">${idx+1}</td><td>${i.Nama_Barang}</td><td class="text-center">${i.Kategori}</td><td class="text-center">${i.Kepemilikan}</td><td class="text-center">${i.Stok} ${i.Satuan}</td><td class="text-center">${i.Kondisi}</td><td class="text-center">${formatDateStr(i.Tanggal_Beli)}</td></tr>`; });
                 html += `</tbody></table>`;
             } else if(jenis === 'penggunaan') {
                 subtitle = "<h3 class='text-center'>LAPORAN RIWAYAT PENGGUNAAN FASILITAS</h3>";
                 html = `<table><thead><tr><th>Tanggal Mulai</th><th>Peminjam (Jabatan)</th><th>Keperluan</th><th>Status Akhir</th></tr></thead><tbody>`;
-                db.jadwal.forEach(j => { html += `<tr><td>${formatDateStr(j.Tgl_Mulai)}</td><td>${j.Peminjam}</td><td>${j.Keperluan}</td><td class="text-center">${j.Status_Global}</td></tr>`; });
+                (db.jadwal || []).forEach(j => { html += `<tr><td>${formatDateStr(j.Tgl_Mulai)}</td><td>${j.Peminjam}</td><td>${j.Keperluan}</td><td class="text-center">${j.Status_Global}</td></tr>`; });
                 html += `</tbody></table>`;
             } else if(jenis === 'gantirugi') {
                 subtitle = "<h3 class='text-center'>LAPORAN TANGGUNGAN &amp; GANTI RUGI</h3>";
                 html = `<table><thead><tr><th>Tanggal Kejadian</th><th>Peminjam (Unit)</th><th>Pemilik Aset</th><th>Nama Aset</th><th>Jumlah Tanggungan</th><th>Status Lunas</th></tr></thead><tbody>`;
-                db.tanggungan.forEach(t => { html += `<tr><td>${formatDateStr(t.Tanggal)}</td><td>${t.Peminjam} (${t.Unit_Peminjam})</td><td class="text-center">${t.Memakai_Milik}</td><td>${t.Nama_Barang}</td><td class="text-center"><b>${t.Jumlah_Rusak_Habis}</b></td><td class="text-center">${t.Status_GantiRugi}</td></tr>`; });
+                (db.tanggungan || []).forEach(t => { html += `<tr><td>${formatDateStr(t.Tanggal)}</td><td>${t.Peminjam} (${t.Unit_Peminjam})</td><td class="text-center">${t.Memakai_Milik}</td><td>${t.Nama_Barang}</td><td class="text-center"><b>${t.Jumlah_Rusak_Habis}</b></td><td class="text-center">${t.Status_GantiRugi}</td></tr>`; });
                 html += `</tbody></table>`;
             } else if(jenis === 'usulan') {
                 subtitle = "<h3 class='text-center'>DAFTAR USULAN PENGADAAN ITEM BARU DARI GURU</h3>";
@@ -1112,12 +1194,12 @@
         }
 
         function cetakLaporanSatuan(idLapor) {
-            let lapor = db.laporan.find(l => l.ID_Laporan === idLapor); if(!lapor) return;
-            let jdwl = db.jadwal.find(j => j.ID_Jadwal === lapor.ID_Jadwal);
+            let lapor = (db.laporan || []).find(l => l.ID_Laporan === idLapor); if(!lapor) return;
+            let jdwl = (db.jadwal || []).find(j => j.ID_Jadwal === lapor.ID_Jadwal);
             let imgHtml = "";
             if (lapor.URL_Foto_Bukti) {
-                let urls = lapor.URL_Foto_Bukti.split(",");
-                urls.forEach(u => { imgHtml += `<img src="${u.trim()}" style="width:200px; height:200px; object-fit:cover; margin:10px; border:1px solid #ccc; display:inline-block;"/>`; });
+                let urls = String(lapor.URL_Foto_Bukti).split(",");
+                urls.forEach(u => { if (u.trim()) imgHtml += `<img src="${u.trim()}" style="width:200px; height:200px; object-fit:cover; margin:10px; border:1px solid #ccc; display:inline-block;"/>`; });
             } else { imgHtml = "<i>(Tidak ada lampiran foto bukti)</i>"; }
 
             let html = `<h3 style="text-align:center; text-decoration:underline; margin-bottom:20px;">DOKUMEN LAPORAN PASCA PRAKTIKUM</h3>
@@ -1134,8 +1216,8 @@
         }
 
         function cetakBuktiPerizinan(idJadwal) {
-            let jdwl = db.jadwal.find(j => j.ID_Jadwal === idJadwal); if(!jdwl) return alert("Data tidak ditemukan.");
-            let det = db.detail.filter(d => d.ID_Jadwal === idJadwal); 
+            let jdwl = (db.jadwal || []).find(j => j.ID_Jadwal === idJadwal); if(!jdwl) return alert("Data tidak ditemukan.");
+            let det = (db.detail || []).filter(d => d.ID_Jadwal === idJadwal); 
             let listStr = det.map(d => `<li>${d.Nama_Barang} - Jumlah: <b>${d.Jumlah}</b> (${d.Kepemilikan})</li>`).join("");
             
             let html = `<h3 style="text-align:center; text-decoration:underline; font-size:16px;">SURAT BUKTI OTORISASI LABORATORIUM</h3>
@@ -1143,7 +1225,7 @@
             <table style="border:none;">
                 <tr><td style="width:150px; border:none; padding:4px;"><b>Nama Peminjam</b></td><td style="border:none; padding:4px;">: ${jdwl.Peminjam} (${jdwl.Unit})</td></tr>
                 <tr><td style="border:none; padding:4px;"><b>Rentang Tanggal</b></td><td style="border:none; padding:4px;">: ${formatDateStr(jdwl.Tgl_Mulai)} s/d ${formatDateStr(jdwl.Tgl_Selesai)}</td></tr>
-                <tr><td style="border:none; padding:4px;"><b>Waktu / Jam</b></td><td style="border:none; padding:4px;">: ${jdwl.Jam_Mulai} - ${jdwl.Jam_Selesai}</td></tr>
+                <tr><td style="border:none; padding:4px;"><b>Waktu / Jam</b></td><td style="border:none; padding:4px;">: ${formatTimeStr(jdwl.Jam_Mulai)} - ${formatTimeStr(jdwl.Jam_Selesai)}</td></tr>
                 <tr><td style="border:none; padding:4px;"><b>Materi/Keperluan</b></td><td style="border:none; padding:4px;">: ${jdwl.Keperluan}</td></tr>
                 <tr><td style="border:none; padding:4px;"><b>Status Sistem</b></td><td style="border:none; padding:4px;">: <b>${jdwl.Status_Global}</b></td></tr>
             </table>
@@ -1154,10 +1236,15 @@
         }
 
         // --- GURU CATALOG & FILTERING ---
-        function filterKategoriGuru(k) { 
+        function filterKategoriGuru(k, btn) { 
             currentKatFilter = k; 
-            document.querySelectorAll('.filter-btn').forEach(b => { b.classList.remove('bg-slate-800','text-white'); b.classList.add('bg-slate-100','text-slate-600'); }); 
-            event.target.classList.add('bg-slate-800','text-white'); renderGuruKatalog(); 
+            document.querySelectorAll('.filter-btn').forEach(b => { b.classList.remove('bg-slate-800','text-white','active-filter'); b.classList.add('bg-slate-100','text-slate-600'); }); 
+            let targetBtn = btn || (typeof event !== 'undefined' ? event.target : null);
+            if (targetBtn) {
+                targetBtn.classList.remove('bg-slate-100','text-slate-600');
+                targetBtn.classList.add('bg-slate-800','text-white','active-filter');
+            }
+            renderGuruKatalog(); 
         }
         
         function renderGuruKatalog() {
@@ -1167,634 +1254,41 @@
             let searchQ = document.getElementById("searchGuruInv").value.toLowerCase();
             let filterMilik = document.getElementById("filterMilikGuru").value;
             
-            let filtered = db.inventaris;
+            let filtered = (db.inventaris || []).slice();
             if (filterMilik !== "Semua") filtered = filtered.filter(i => i.Kepemilikan === filterMilik);
             if (currentKatFilter !== "Semua") filtered = filtered.filter(i => i.Kategori === currentKatFilter);
             
-            filtered = filtered.filter(i => i.Nama_Barang.toLowerCase().includes(searchQ)); 
-            filtered.sort((a, b) => a.Nama_Barang.localeCompare(b.Nama_Barang));
+            filtered = filtered.filter(i => String(i.Nama_Barang || "").toLowerCase().includes(searchQ)); 
+            filtered.sort((a, b) => String(a.Nama_Barang || "").localeCompare(String(b.Nama_Barang || "")));
 
             filtered.forEach(item => {
                 let imgSrc = item.URL_Gambar ? item.URL_Gambar : "https://via.placeholder.com/150";
                 let realStok = getStokTersedia(item.ID_Barang, tglM, tglS); let isKosong = realStok <= 0;
-                grid.innerHTML += `<div class="bg-white border rounded-2xl flex flex-col overflow-hidden shadow-sm hover:shadow-md transition-all ${isKosong?'opacity-60 grayscale':''}"><div class="h-24 bg-slate-50 relative border-b"><img src="${imgSrc}" class="w-full h-full object-cover"/><div class="${isKosong?'absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center':'hidden'}"><span class="text-white font-bold text-xs tracking-wider border border-white/50 px-2 py-1 rounded">HABIS</span></div></div><div class="p-4 flex flex-col flex-grow"><h4 class="text-sm font-bold text-slate-800 mb-1 leading-snug">${item.Nama_Barang}</h4><div class="flex justify-between items-center mb-4 mt-auto"><span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase font-bold">${item.Kategori}</span><span class="text-[11px] text-slate-500">Stok: <b class="text-slate-800 text-sm">${realStok}</b></span></div><button onclick="addToCart('${item.ID_Barang}','${item.Nama_Barang}','${item.Kepemilikan}','${item.Kategori}',${realStok})" ${(!hasDate || isKosong) ? 'disabled' : ''} class="w-full ${(!hasDate || isKosong)?'bg-slate-100 text-slate-400':'bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white border border-emerald-200 hover:border-emerald-600'} text-xs font-bold py-2 rounded-xl transition-all">Pilih Item</button></div></div>`;
+                grid.innerHTML += `<div class="bg-white border rounded-2xl flex flex-col overflow-hidden shadow-sm hover:shadow-md transition-all ${isKosong?'opacity-60 grayscale':''}"><div class="h-24 bg-slate-50 relative border-b"><img src="${imgSrc}" class="w-full h-full object-cover"/><div class="${isKosong?'absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center':'hidden'}"><span class="text-white font-bold text-xs tracking-wider border border-white/50 px-2 py-1 rounded">HABIS</span></div></div><div class="p-4 flex flex-col flex-grow"><h4 class="text-sm font-bold text-slate-800 mb-1 leading-snug">${item.Nama_Barang}</h4><div class="flex justify-between items-center mb-4 mt-auto"><span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase font-bold">${item.Kategori}</span><span class="text-[11px] text-slate-500">Stok: <b class="text-slate-800 text-sm">${realStok}</b></span></div><button onclick="addToCartById('${item.ID_Barang}', ${realStok})" ${(!hasDate || isKosong) ? 'disabled' : ''} class="w-full ${(!hasDate || isKosong)?'bg-slate-100 text-slate-400':'bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white border border-emerald-200 hover:border-emerald-600'} text-xs font-bold py-2 rounded-xl transition-all">Pilih Item</button></div></div>`;
             });
         }
         
         function getStokTersedia(idBarang, tglM, tglS) {
-            let item = db.inventaris.find(i => i.ID_Barang === idBarang); if(!item) return 0;
-            let maxStok = parseInt(item.Stok); if(!tglM || !tglS) return maxStok;
+            let item = (db.inventaris || []).find(i => i.ID_Barang === idBarang); if(!item) return 0;
+            let maxStok = parseInt(item.Stok) || 0; if(!tglM || !tglS) return maxStok;
             
-            let start1 = new Date(tglM); start1.setHours(0,0,0,0);
-            let end1 = new Date(tglS); end1.setHours(23,59,59,999);
+            let start1 = parseDateSafe(tglM); if (!start1) return maxStok; start1.setHours(0,0,0,0);
+            let end1 = parseDateSafe(tglS) || new Date(start1.getTime()); end1.setHours(23,59,59,999);
             let dipakai = 0;
             
-            db.jadwal.forEach(j => {
+            (db.jadwal || []).forEach(j => {
                 if(j.Status_Global === 'Ditolak' || j.Status_Global === 'Selesai (Sudah Lapor)' || j.Status_Global === 'Dibatalkan') return;
-                let start2 = new Date(j.Tgl_Mulai); start2.setHours(0,0,0,0);
-                let end2 = new Date(j.Tgl_Selesai); end2.setHours(23,59,59,999);
-                if(start1 <= end2 && start2 <= end1) { db.detail.filter(d => d.ID_Jadwal === j.ID_Jadwal && d.ID_Barang === idBarang).forEach(d => { dipakai += parseInt(d.Jumlah); }); }
+                let start2 = parseDateSafe(j.Tgl_Mulai); if (!start2) return; start2.setHours(0,0,0,0);
+                let end2 = parseDateSafe(j.Tgl_Selesai) || new Date(start2.getTime()); end2.setHours(23,59,59,999);
+                if(start1 <= end2 && start2 <= end1) { (db.detail || []).filter(d => d.ID_Jadwal === j.ID_Jadwal && d.ID_Barang === idBarang).forEach(d => { dipakai += parseInt(d.Jumlah) || 0; }); }
             });
             return Math.max(0, maxStok - dipakai);
         }
 
-        // KENDALI KERANJANG
-        function addToCart(id, nama, milik, kat, max) { let ex = cart.find(c => c.id_barang === id); if(ex) { if(ex.jumlah < max) ex.jumlah += 1; else alert("Maksimal stok tercapai!"); } else { cart.push({ id_barang: id, nama_barang: nama, kepemilikan: milik, kategori: kat, jumlah: 1, max_stok: max }); } renderCart(); }
-        function updateCartQty(id, newVal, max) { let ex = cart.find(c => c.id_barang === id); if(ex) { let v = parseInt(newVal); if(isNaN(v) || v < 1) v = 1; if(v > max) { alert("Melebihi stok (" + max + ")."); v = max; } ex.jumlah = v; renderCart(); } }
-        function changeCartQty(id, delta) { let ex = cart.find(c => c.id_barang === id); if(ex) { let v = ex.jumlah + delta; if(v < 1) v = 1; if(v > ex.max_stok) v = ex.max_stok; ex.jumlah = v; renderCart(); } }
-        function removeCart(id) { cart = cart.filter(c => c.id_barang !== id); renderCart(); }
-        
-        function renderCart() { 
-            let list = document.getElementById("cartList"); let btn = document.getElementById("btnCheckout"); document.getElementById("cartCount").textContent = cart.length + " item"; list.innerHTML = ""; 
-            if(cart.length === 0) { list.innerHTML = "<div class='text-slate-400 text-xs italic text-center p-4 bg-slate-50 border border-dashed rounded-xl'>Belum ada item.</div>"; btn.disabled = true; return; } btn.disabled = false;
-            cart.forEach(item => { list.innerHTML += `<li class="bg-white border p-2.5 rounded-xl text-xs shadow-sm"><div class="font-bold truncate mb-2">${item.nama_barang} <span class="text-[9px] text-emerald-600 font-normal bg-emerald-50 px-1 rounded">Maks: ${item.max_stok}</span></div><div class="flex justify-between items-center"><div class="flex items-center gap-1 border rounded-lg bg-slate-50"><button type="button" onclick="changeCartQty('${item.id_barang}', -1)" class="px-2 py-1 text-slate-600 font-bold hover:bg-slate-200 rounded-l-lg">-</button><input type="number" min="1" max="${item.max_stok}" value="${item.jumlah}" onchange="updateCartQty('${item.id_barang}', this.value, ${item.max_stok})" class="w-10 text-center text-xs bg-white outline-none font-bold"><button type="button" onclick="changeCartQty('${item.id_barang}', 1)" class="px-2 py-1 text-slate-600 font-bold hover:bg-slate-200 rounded-r-lg">+</button></div><button type="button" onclick="removeCart('${item.id_barang}')" class="text-red-500 bg-red-50 px-2 py-1.5 rounded-lg font-bold">Hapus</button></div></li>`; }); 
+        // KENDALI KERANJANG (AMAN TERHADAP KARAKTER KUTIP PADA NAMA BARANG)
+        function addToCartById(id, max) {
+            let item = (db.inventaris || []).find(i => i.ID_Barang === id);
+            if (!item) return;
+            addToCart(item.ID_Barang, item.Nama_Barang, item.Kepemilikan, item.Kategori, max);
         }
-
-        async function submitCheckout(e) { 
-            e.preventDefault(); 
-            let btn = document.getElementById("btnCheckout"); let ot = btn.textContent; btn.textContent = "Mengirim..."; btn.disabled = true; 
-            let res = await fetchAPI({ action: "ajukanPeminjaman", peminjam: curUser.Nama_Lengkap, unit: curUser.Unit, jabatan: curUser.Jabatan, tglMulai: document.getElementById("outTglMulai").value, tglSelesai: document.getElementById("outTglSelesai").value, jamMulai: document.getElementById("outJamMulai").value, jamSelesai: document.getElementById("outJamSelesai").value, keperluan: document.getElementById("outKeperluan").value, cart: cart }); 
-            alert(res.message); 
-            if(res.status === "success") { 
-                document.getElementById("formCheckout").reset(); cart = []; renderCart(); await loadAllDataSilently(); 
-                
-                // AUTO WA PENGINGAT KE ADMIN SAAT KLIK KIRIM
-                let adminWA = curUser.Unit === 'MTs' ? '6285156245801' : '6282215155800';
-                let txtWA = `Halo Admin Lab ${curUser.Unit}, saya ${curUser.Nama_Lengkap} telah mengajukan peminjaman lab/alat via aplikasi SI-LAB. Mohon segera dicek dan disetujui. Terima kasih.`;
-                window.open(`https://wa.me/${adminWA}?text=${encodeURIComponent(txtWA)}`, '_blank');
-            } 
-            btn.textContent = ot; btn.disabled = false; 
-        }
-
-        function renderRiwayatGuru() { 
-            let list = document.getElementById("riwayatGuruList"); list.innerHTML = ""; 
-            let myJadwal = db.jadwal.filter(j => j.Peminjam.includes(curUser.Nama_Lengkap)).reverse(); 
-            if(myJadwal.length === 0) return list.innerHTML = "<tr><td colspan='4' class='p-8 text-center text-slate-400'>Tidak ada histori jadwal.</td></tr>"; 
-            
-            myJadwal.forEach(j => { 
-                let bG = j.Status_Global === "Disetujui" ? "bg-emerald-100 text-emerald-700" : (j.Status_Global.includes("Selesai") ? "bg-blue-100 text-blue-700" : (j.Status_Global.includes("Batal") ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700")); 
-                let infoBatal = j.Alasan_Batal ? `<div class="text-[9px] text-red-500 font-bold mt-1 bg-red-50 p-1 rounded border border-red-100">Info: ${j.Alasan_Batal}</div>` : '';
-                let btnAksi = "";
-                if (j.Status_Global === "Disetujui") {
-                    btnAksi = `<div class="flex flex-col gap-1 items-end"><button onclick="cetakBuktiPerizinan('${j.ID_Jadwal}')" class="bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-600 hover:text-white text-[10px] font-bold px-3 py-1.5 rounded-lg w-full text-center mb-1">🖨️ Bukti</button><button onclick="bukaModalLaporan('${j.ID_Jadwal}')" class="bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-600 hover:text-white text-[10px] font-bold px-3 py-1.5 rounded-lg w-full text-center">Laporan Pasca</button><button onclick="bukaModalBatal('${j.ID_Jadwal}', 'Guru')" class="text-red-500 hover:underline text-[9px] font-bold mt-1">Ajukan Batal</button></div>`;
-                } else if (j.Status_Global === "Menunggu ACC") {
-                    btnAksi = `<button onclick="bukaModalBatal('${j.ID_Jadwal}', 'Guru')" class="border border-red-200 text-red-500 hover:bg-red-50 text-[10px] font-bold px-3 py-1.5 rounded-lg w-full text-center">Batal / Revisi</button>`;
-                } else { btnAksi = `<span class="text-[10px] text-slate-400 font-medium">Selesai/Batal</span>`; }
-                
-                let dFmtMulai = formatDateStr(j.Tgl_Mulai); let dFmtSelesai = formatDateStr(j.Tgl_Selesai);
-                list.innerHTML += `<tr class="border-b border-slate-50"><td class="p-4 align-top text-xs font-bold text-slate-700">${dFmtMulai}<br><span class="text-[10px] font-normal text-slate-500">s.d ${dFmtSelesai}</span><div class="font-normal text-[10px] text-slate-500 mt-1">${j.Jam_Mulai} - ${j.Jam_Selesai}</div></td><td class="p-4 align-top text-xs text-slate-600">${j.Keperluan}${infoBatal}</td><td class="p-4 align-top text-center"><span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${bG}">${j.Status_Global}</span></td><td class="p-4 align-top text-right w-32">${btnAksi}</td></tr>`; 
-            }); 
-        }
-
-        // --- SISTEM LAPORAN GURU ---
-        function bukaModalLaporan(id) { document.getElementById("lapJadwalID").value = id; let det = db.detail.filter(d => d.ID_Jadwal === id); let html = ""; det.forEach(d => { if(d.Kategori !== "Ruangan") html += `<div class="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-100 shadow-sm mb-2"><div class="text-[11px] font-bold text-slate-700">${d.Nama_Barang} <span class="bg-slate-100 text-slate-500 px-1 rounded ml-1">Pinjam: ${d.Jumlah}</span></div><input type="number" min="0" max="${d.Jumlah}" value="0" class="border border-slate-200 rounded-lg w-16 p-1.5 text-xs text-center item-lapor-qty outline-none focus:border-amber-500" data-id="${d.ID_Barang}"></div>`; }); document.getElementById("lapListBarang").innerHTML = html || "<div class='text-xs text-slate-400 p-2'>Tidak ada instrumen fisik yang dipinjam.</div>"; document.getElementById("modalLaporan").classList.remove("hidden"); }
-        async function submitLaporan(e) { e.preventDefault(); let terpakai = []; let btn = document.getElementById("btnSubmitLaporan"); let ot = btn.textContent; btn.textContent = "Upload Data..."; btn.disabled = true; document.querySelectorAll(".item-lapor-qty").forEach(input => { if(parseInt(input.value) > 0) terpakai.push({ id_barang: input.getAttribute("data-id"), qty_hilang_habis: parseInt(input.value) }); }); let fileInput = document.getElementById("lapFileFoto"); let filesArray = []; if (fileInput.files.length > 0) { for(let f=0; f<fileInput.files.length; f++){ let b64 = await toBase64(fileInput.files[f]); filesArray.push({ base64: b64, name: fileInput.files[f].name, mime: fileInput.files[f].type }); } } let res = await fetchAPI({ action: "submitLaporanPasca", id_jadwal: document.getElementById("lapJadwalID").value, peminjam: curUser.Nama_Lengkap, unit_peminjam: curUser.Unit, kondisi_alat: document.getElementById("lapKondisi").value, ada_insiden: document.getElementById("lapInsiden").value, kronologi: document.getElementById("lapKronologi").value, item_terpakai: terpakai, files: filesArray }); alert(res.message); if(res.status === "success") { document.getElementById("modalLaporan").classList.add("hidden"); document.getElementById("formLaporan").reset(); await loadAllDataSilently(); } btn.textContent = ot; btn.disabled = false; }
-
-        // --- USULAN PENGADAAN GURU ---
-        async function submitUsulan(e) { e.preventDefault(); let btn = document.getElementById("btnUsul"); let ot = btn.textContent; btn.textContent = "Mengirim..."; btn.disabled = true; let payload = { action: "usulkanItem", pengusul: curUser.Nama_Lengkap, unit: curUser.Unit, nama_item: document.getElementById("usulNama").value, kategori: document.getElementById("usulKat").value, jumlah: document.getElementById("usulJml").value, alasan: document.getElementById("usulAlasan").value }; let res = await fetchAPI(payload); alert(res.message); if(res.status === "success"){ document.getElementById("modalUsulan").classList.add("hidden"); e.target.reset(); await loadAllDataSilently(); } btn.textContent = ot; btn.disabled = false; }
-    // ============================================================
-        // [BARU V15] MODUL BUKU/JURNAL, DATA & GRAFIK LAYANAN (ADMIN)
-        // ============================================================
-        let silabCharts = {};
-
-        // Perluas populatePengaturanForm & simpanPengaturan agar mencakup Kepala Madrasah & Target Sesi
-        const _origPopulatePengaturan = populatePengaturanForm;
-        populatePengaturanForm = function() {
-            _origPopulatePengaturan();
-            if (document.getElementById("setKepmadMTs")) {
-                let kmMts = getSetting("Kepala_Madrasah_MTs");
-                let kmMa = getSetting("Kepala_Madrasah_MA");
-                let targetS = getSetting("Target_Sesi_Semester");
-                document.getElementById("setKepmadMTs").value = kmMts !== "Nama Belum Diatur" ? kmMts : "Agung Hidayatullah, S.Sos.I.";
-                document.getElementById("setKepmadMA").value = kmMa !== "Nama Belum Diatur" ? kmMa : "Kepala Madrasah MA";
-                document.getElementById("setTargetSesi").value = targetS !== "Nama Belum Diatur" ? targetS : "24";
-            }
-        };
-
-        simpanPengaturan = async function(e) {
-            e.preventDefault();
-            let btn = document.getElementById("btnSimpanPengaturan");
-            let ot = btn.textContent; btn.textContent = "Menyimpan..."; btn.disabled = true;
-            let res = await fetchAPI({
-                action: "simpanPengaturan",
-                kepala_mts: document.getElementById("setKepalaMTs").value,
-                kepala_ma: document.getElementById("setKepalaMA").value,
-                kepala_madrasah_mts: document.getElementById("setKepmadMTs") ? document.getElementById("setKepmadMTs").value : "",
-                kepala_madrasah_ma: document.getElementById("setKepmadMA") ? document.getElementById("setKepmadMA").value : "",
-                target_sesi: document.getElementById("setTargetSesi") ? document.getElementById("setTargetSesi").value : "24"
-            });
-            alert(res.message);
-            await loadAllDataSilently();
-            btn.textContent = ot; btn.disabled = false;
-        };
-
-        // Kaitkan auto-refresh modul layanan pada sinkronisasi latar belakang (tanpa animasi loncat)
-        const _origRenderLaporanAdmin = renderLaporanAdmin;
-        renderLaporanAdmin = function() {
-            _origRenderLaporanAdmin();
-            if (curUser && curUser.Role === "Admin") {
-                renderModulLayanan(false);
-            }
-        };
-
-        function switchSubLayanan(panelId, btn) {
-            document.querySelectorAll('.sub-layanan-panel').forEach(p => p.classList.add('hidden'));
-            document.querySelectorAll('.sub-layanan-btn').forEach(b => {
-                b.classList.remove('bg-slate-800', 'text-white');
-                b.classList.add('bg-slate-100', 'text-slate-600');
-            });
-            document.getElementById(panelId).classList.remove('hidden');
-            btn.classList.remove('bg-slate-100', 'text-slate-600');
-            btn.classList.add('bg-slate-800', 'text-white');
-            if (panelId === 'subGrafik') renderGrafikLayanan(true);
-        }
-
-        function switchJenisBuku(bukuId, btn) {
-            document.querySelectorAll('.panel-buku').forEach(p => p.classList.add('hidden'));
-            document.querySelectorAll('.jenis-buku-btn').forEach(b => {
-                b.classList.remove('bg-emerald-600', 'text-white');
-                b.classList.add('bg-slate-100', 'text-slate-600');
-            });
-            document.getElementById(bukuId).classList.remove('hidden');
-            btn.classList.remove('bg-slate-100', 'text-slate-600');
-            btn.classList.add('bg-emerald-600', 'text-white');
-        }
-
-        function formatHariTanggal(dateStr) {
-            if (!dateStr) return "-";
-            try {
-                let d = new Date(dateStr);
-                if (isNaN(d.getTime())) return dateStr;
-                let hari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"][d.getDay()];
-                let dd = String(d.getDate()).padStart(2, '0');
-                let mm = String(d.getMonth() + 1).padStart(2, '0');
-                return `${hari}, ${dd}/${mm}/${d.getFullYear()}`;
-            } catch (e) { return dateStr; }
-        }
-
-        function cocokFilterPeriode(dateStr, unitVal) {
-            let fPeriode = document.getElementById("layananFilterPeriode").value;
-            let fTahun = document.getElementById("layananFilterTahun").value;
-            let fUnit = document.getElementById("layananFilterUnit").value;
-
-            if (fUnit !== "Semua" && unitVal && unitVal !== "Bersama" && unitVal !== "Terpadu" && unitVal !== fUnit) return false;
-            if (!dateStr) return fPeriode === "semua" && fTahun === "semua";
-
-            let d = new Date(dateStr);
-            if (isNaN(d.getTime())) return true;
-
-            if (fTahun !== "semua" && String(d.getFullYear()) !== fTahun) return false;
-            let bln = d.getMonth(); // 0-11
-            if (fPeriode === "ganjil" && (bln < 6 || bln > 11)) return false;
-            if (fPeriode === "genap" && (bln < 0 || bln > 5)) return false;
-            if (!isNaN(parseInt(fPeriode)) && bln !== parseInt(fPeriode)) return false;
-            return true;
-        }
-
-        function isiDropdownImporJadwal() {
-            let sel = document.getElementById("imporJadwalSelect");
-            if (!sel) return;
-            let valSkrg = sel.value;
-            let html = `<option value="">-- Isi Cepat dari Jadwal Disetujui/Selesai --</option>`;
-            (db.jadwal || []).filter(j => j.Status_Global === "Disetujui" || j.Status_Global.includes("Selesai")).slice().reverse().forEach(j => {
-                html += `<option value="${j.ID_Jadwal}">${formatDateStr(j.Tgl_Mulai)} | ${j.Peminjam.split(" (")[0]} - ${j.Keperluan}</option>`;
-            });
-            sel.innerHTML = html;
-            sel.value = valSkrg;
-        }
-
-        function isiFormJurnalDariJadwal(idJadwal) {
-            if (!idJadwal) return;
-            let j = (db.jadwal || []).find(x => x.ID_Jadwal === idJadwal);
-            if (!j) return;
-            document.getElementById("jrnTgl").value = j.Tgl_Mulai ? String(j.Tgl_Mulai).substring(0, 10) : "";
-            document.getElementById("jrnJam").value = `${j.Jam_Mulai || ''} - ${j.Jam_Selesai || ''}`;
-            document.getElementById("jrnTopik").value = j.Keperluan || "";
-            document.getElementById("jrnGuru").value = j.Peminjam ? j.Peminjam.split(" (")[0] : "";
-            document.getElementById("jrnUnit").value = j.Unit === "MA" ? "MA" : "MTs";
-            let lap = (db.laporan || []).find(l => l.ID_Jadwal === idJadwal);
-            document.getElementById("jrnCatatan").value = lap ? lap.Kondisi_Bahan_Alat : "Praktikum berjalan lancar";
-        }
-
-        // --- CRUD JURNAL, TAMU, PEMELIHARAAN ---
-        async function simpanEntriJurnal(e) {
-            e.preventDefault();
-            let btn = document.getElementById("btnSimpanJurnal"); let ot = btn.textContent; btn.textContent = "Menyimpan..."; btn.disabled = true;
-            let res = await fetchAPI({
-                action: "simpanJurnal",
-                tanggal: document.getElementById("jrnTgl").value,
-                jam_ke: document.getElementById("jrnJam").value,
-                kelas: document.getElementById("jrnKelas").value,
-                mapel_topik: document.getElementById("jrnTopik").value,
-                guru_pengampu: document.getElementById("jrnGuru").value,
-                unit: document.getElementById("jrnUnit").value,
-                jumlah_siswa: document.getElementById("jrnSiswa").value,
-                jenis_layanan: document.getElementById("jrnJenis").value,
-                kondisi_catatan: document.getElementById("jrnCatatan").value || "Alat lengkap & baik"
-            });
-            alert(res.message);
-            if (res.status === "success") { e.target.reset(); await loadAllDataSilently(); renderModulLayanan(true); }
-            btn.textContent = ot; btn.disabled = false;
-        }
-
-        async function hapusEntriJurnal(id) {
-            if (!confirm("Hapus entri jurnal ini?")) return;
-            let res = await fetchAPI({ action: "hapusJurnal", id_jurnal: id });
-            if (res.status === "success") { await loadAllDataSilently(); renderModulLayanan(true); }
-        }
-
-        async function simpanEntriTamu(e) {
-            e.preventDefault();
-            let btn = document.getElementById("btnSimpanTamu"); let ot = btn.textContent; btn.textContent = "Menyimpan..."; btn.disabled = true;
-            let res = await fetchAPI({
-                action: "simpanTamu",
-                tanggal: document.getElementById("tamuTgl").value,
-                nama_tamu: document.getElementById("tamuNama").value,
-                instansi_jabatan: document.getElementById("tamuInstansi").value,
-                unit_tujuan: document.getElementById("tamuUnit").value,
-                keperluan: document.getElementById("tamuKeperluan").value,
-                kesan_pesan: document.getElementById("tamuKesan").value || "-"
-            });
-            alert(res.message);
-            if (res.status === "success") { e.target.reset(); await loadAllDataSilently(); renderModulLayanan(true); }
-            btn.textContent = ot; btn.disabled = false;
-        }
-
-        async function hapusEntriTamu(id) {
-            if (!confirm("Hapus catatan kunjungan tamu ini?")) return;
-            let res = await fetchAPI({ action: "hapusTamu", id_tamu: id });
-            if (res.status === "success") { await loadAllDataSilently(); renderModulLayanan(true); }
-        }
-
-        async function simpanEntriPemeliharaan(e) {
-            e.preventDefault();
-            let btn = document.getElementById("btnSimpanLog"); let ot = btn.textContent; btn.textContent = "Menyimpan..."; btn.disabled = true;
-            let res = await fetchAPI({
-                action: "simpanPemeliharaan",
-                tanggal: document.getElementById("logTgl").value,
-                nama_alat: document.getElementById("logAlat").value,
-                unit: document.getElementById("logUnit").value,
-                jenis_catatan: document.getElementById("logJenis").value,
-                deskripsi_tindakan: document.getElementById("logDesk").value,
-                status: document.getElementById("logStatus").value
-            });
-            alert(res.message);
-            if (res.status === "success") { e.target.reset(); await loadAllDataSilently(); renderModulLayanan(true); }
-            btn.textContent = ot; btn.disabled = false;
-        }
-
-        async function hapusEntriPemeliharaan(id) {
-            if (!confirm("Hapus catatan pemeliharaan ini?")) return;
-            let res = await fetchAPI({ action: "hapusPemeliharaan", id_log: id });
-            if (res.status === "success") { await loadAllDataSilently(); renderModulLayanan(true); }
-        }
-
-        // --- KOMPILASI & RENDER SELURUH MODUL LAYANAN ---
-        function kumpulkanDataLayanan() {
-            let jurnalF = (db.jurnal || []).filter(x => cocokFilterPeriode(x.Tanggal, x.Unit));
-            let jadwalF = (db.jadwal || []).filter(x => (x.Status_Global === "Disetujui" || x.Status_Global.includes("Selesai")) && cocokFilterPeriode(x.Tgl_Mulai, x.Unit));
-            let tamuF = (db.tamu || []).filter(x => cocokFilterPeriode(x.Tanggal, x.Unit_Tujuan));
-            let logF = (db.pemeliharaan || []).filter(x => cocokFilterPeriode(x.Tanggal, x.Unit));
-            let laporF = (db.laporan || []).filter(x => cocokFilterPeriode(x.Tanggal_Lapor, "Semua"));
-            let fUnit = document.getElementById("layananFilterUnit").value;
-            let invF = (db.inventaris || []).filter(i => fUnit === "Semua" || i.Kepemilikan === fUnit || i.Kepemilikan === "Bersama");
-            return { jurnalF, jadwalF, tamuF, logF, laporF, invF };
-        }
-
-        function renderModulLayanan(animateCharts = false) {
-            if (!document.getElementById("tabLayanan")) return;
-            isiDropdownImporJadwal();
-            let { jurnalF, jadwalF, tamuF, logF, laporF, invF } = kumpulkanDataLayanan();
-
-            // 1. RENDER BUKU JURNAL RUANG
-            let tbJ = document.getElementById("tbodyJurnalRuang"); tbJ.innerHTML = "";
-            if (jurnalF.length === 0) {
-                tbJ.innerHTML = `<tr><td colspan="10" class="p-6 text-center text-slate-400 italic">Belum ada entri jurnal pada periode ini. Gunakan form di atas untuk mencatat.</td></tr>`;
-            } else {
-                jurnalF.forEach((j, idx) => {
-                    tbJ.innerHTML += `<tr class="hover:bg-slate-50"><td class="p-3 font-bold">${idx + 1}</td><td class="p-3 whitespace-nowrap">${formatHariTanggal(j.Tanggal)}</td><td class="p-3">${j.Jam_Ke}</td><td class="p-3 font-bold">${j.Kelas} <span class="text-[9px] text-slate-400">(${j.Unit})</span></td><td class="p-3">${j.Mapel_Topik}</td><td class="p-3">${j.Guru_Pengampu}</td><td class="p-3 text-center font-bold">${j.Jumlah_Siswa}</td><td class="p-3"><span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">${j.Jenis_Layanan}</span></td><td class="p-3 text-slate-600">${j.Kondisi_Catatan || '-'}</td><td class="p-3 text-right"><button onclick="hapusEntriJurnal('${j.ID_Jurnal}')" class="text-red-500 hover:underline font-bold text-[10px]">Hapus</button></td></tr>`;
-                });
-            }
-
-            // 2. RENDER BUKU PINJAM ALAT
-            let tbA = document.getElementById("tbodyBukuAlat"); tbA.innerHTML = "";
-            let idxAlat = 0;
-            jadwalF.forEach(j => {
-                let alatList = (db.detail || []).filter(d => d.ID_Jadwal === j.ID_Jadwal).map(d => `${d.Nama_Barang} (x${d.Jumlah})`).join(", ");
-                if (!alatList) return;
-                idxAlat++;
-                let lap = (db.laporan || []).find(l => l.ID_Jadwal === j.ID_Jadwal);
-                let kondisi = lap ? lap.Kondisi_Bahan_Alat : j.Status_Global;
-                tbA.innerHTML += `<tr class="hover:bg-slate-50"><td class="p-3 font-bold">${idxAlat}</td><td class="p-3 whitespace-nowrap">${formatDateStr(j.Tgl_Mulai)} &ndash; ${formatDateStr(j.Tgl_Selesai)}</td><td class="p-3 font-bold">${j.Peminjam} <span class="text-[10px] text-slate-400">(${j.Unit})</span></td><td class="p-3">${alatList}</td><td class="p-3">${j.Keperluan}</td><td class="p-3"><span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold">${kondisi}</span></td></tr>`;
-            });
-            if (idxAlat === 0) tbA.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic">Belum ada transaksi peminjaman alat pada periode ini.</td></tr>`;
-
-            // 3. RENDER JURNAL BHP
-            let tbB = document.getElementById("tbodyBukuBHP"); tbB.innerHTML = "";
-            let idxBHP = 0;
-            let konsumsiBHPMap = {};
-            jadwalF.forEach(j => {
-                (db.detail || []).filter(d => d.ID_Jadwal === j.ID_Jadwal).forEach(d => {
-                    let invItem = (db.inventaris || []).find(i => i.ID_Barang === d.ID_Barang);
-                    if (invItem && invItem.Kategori === "Bahan") {
-                        idxBHP++;
-                        konsumsiBHPMap[d.Nama_Barang] = {
-                            terpakai: (konsumsiBHPMap[d.Nama_Barang]?.terpakai || 0) + (parseInt(d.Jumlah) || 0),
-                            sisa: `${invItem.Stok} ${invItem.Satuan}`
-                        };
-                        tbB.innerHTML += `<tr class="hover:bg-slate-50"><td class="p-3 font-bold">${idxBHP}</td><td class="p-3 whitespace-nowrap">${formatDateStr(j.Tgl_Mulai)}</td><td class="p-3 font-bold">${d.Nama_Barang}</td><td class="p-3">${d.Kepemilikan}</td><td class="p-3 text-center font-bold text-amber-700">${d.Jumlah} ${invItem.Satuan}</td><td class="p-3 text-center font-bold text-emerald-700">${invItem.Stok} ${invItem.Satuan}</td><td class="p-3">${j.Peminjam.split(" (")[0]} &ndash; ${j.Keperluan}</td></tr>`;
-                    }
-                });
-            });
-            if (idxBHP === 0) tbB.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400 italic">Belum ada penggunaan Bahan Habis Pakai (BHP) pada periode ini.</td></tr>`;
-
-            // 4. RENDER BUKU INSIDEN & PEMELIHARAAN
-            let tbI = document.getElementById("tbodyBukuInsiden"); tbI.innerHTML = "";
-            let idxIns = 0;
-            laporF.filter(l => l.Insiden_Kecelakaan && l.Insiden_Kecelakaan !== "Tidak Ada").forEach(l => {
-                idxIns++;
-                tbI.innerHTML += `<tr class="bg-red-50/30"><td class="p-3 font-bold">${idxIns}</td><td class="p-3 whitespace-nowrap">${formatDateStr(l.Tanggal_Lapor)}</td><td class="p-3"><span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold">Insiden: ${l.Insiden_Kecelakaan}</span></td><td class="p-3 font-bold">${l.Peminjam}</td><td class="p-3">${l.Kronologi_Insiden || l.Kondisi_Bahan_Alat}</td><td class="p-3 text-xs">Tercatat di Laporan</td><td class="p-3 text-right text-[10px] text-slate-400">Otomatis</td></tr>`;
-            });
-            logF.forEach(p => {
-                idxIns++;
-                tbI.innerHTML += `<tr class="hover:bg-slate-50"><td class="p-3 font-bold">${idxIns}</td><td class="p-3 whitespace-nowrap">${formatDateStr(p.Tanggal)}</td><td class="p-3"><span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold">${p.Jenis_Catatan}</span></td><td class="p-3 font-bold">${p.Nama_Alat} (${p.Unit})</td><td class="p-3">${p.Deskripsi_Tindakan}</td><td class="p-3 font-bold text-emerald-700">${p.Status}</td><td class="p-3 text-right"><button onclick="hapusEntriPemeliharaan('${p.ID_Log}')" class="text-red-500 hover:underline font-bold text-[10px]">Hapus</button></td></tr>`;
-            });
-            if (idxIns === 0) tbI.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400 italic">Nihil insiden maupun catatan pemeliharaan pada periode ini.</td></tr>`;
-
-            // 5. RENDER BUKU TAMU
-            let tbT = document.getElementById("tbodyBukuTamu"); tbT.innerHTML = "";
-            if (tamuF.length === 0) {
-                tbT.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400 italic">Belum ada catatan kunjungan/tamu pada periode ini.</td></tr>`;
-            } else {
-                tamuF.forEach((t, idx) => {
-                    tbT.innerHTML += `<tr class="hover:bg-slate-50"><td class="p-3 font-bold">${idx + 1}</td><td class="p-3 whitespace-nowrap">${formatDateStr(t.Tanggal)}</td><td class="p-3 font-bold">${t.Nama_Tamu}</td><td class="p-3">${t.Instansi_Jabatan}</td><td class="p-3">${t.Keperluan}</td><td class="p-3 text-slate-600">${t.Kesan_Pesan || '-'}</td><td class="p-3 text-right"><button onclick="hapusEntriTamu('${t.ID_Tamu}')" class="text-red-500 hover:underline font-bold text-[10px]">Hapus</button></td></tr>`;
-                });
-            }
-
-            // === HITUNG STATISTIK REKAP DATA (PILAR 2) ===
-            let totalSesi = jurnalF.length > 0 ? jurnalF.length : jadwalF.length;
-            let targetSesi = parseInt(getSetting("Target_Sesi_Semester")) || 24;
-            let persenRealisasi = Math.min(100, Math.round((totalSesi / targetSesi) * 100));
-            let totalSiswa = jurnalF.reduce((acc, j) => acc + (parseInt(j.Jumlah_Siswa) || 0), 0);
-            let asetBaik = invF.filter(i => i.Kondisi === "Baik").length;
-            let persenLayak = invF.length > 0 ? Math.round((asetBaik / invF.length) * 100) : 100;
-
-            document.getElementById("kpiTotalSesi").textContent = totalSesi;
-            document.getElementById("kpiRealisasi").textContent = persenRealisasi + "%";
-            document.getElementById("kpiTargetInfo").textContent = `Realisasi ${totalSesi} dari target ${targetSesi} sesi`;
-            document.getElementById("kpiTotalSiswa").textContent = totalSiswa;
-            document.getElementById("kpiKelayakan").textContent = persenLayak + "%";
-            document.getElementById("kpiKondisiInfo").textContent = `${asetBaik} Baik / ${invF.length - asetBaik} Rusak`;
-
-            // Rekap Per Bulan
-            let namaBulan = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
-            let tbBulan = document.getElementById("tbodyRekapBulan"); tbBulan.innerHTML = "";
-            for (let m = 0; m < 12; m++) {
-                let jB = jurnalF.filter(x => new Date(x.Tanggal).getMonth() === m);
-                let bB = jadwalF.filter(x => new Date(x.Tgl_Mulai).getMonth() === m);
-                let sB = jB.reduce((a, b) => a + (parseInt(b.Jumlah_Siswa) || 0), 0);
-                if (jB.length > 0 || bB.length > 0) {
-                    tbBulan.innerHTML += `<tr><td class="p-2.5 font-bold">${namaBulan[m]}</td><td class="p-2.5 text-center font-bold text-emerald-700">${jB.length}</td><td class="p-2.5 text-center font-bold text-indigo-700">${bB.length}</td><td class="p-2.5 text-center">${sB}</td></tr>`;
-                }
-            }
-            if (!tbBulan.innerHTML) tbBulan.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400 italic">Belum ada data pada periode ini.</td></tr>`;
-
-            // Top Utilisasi Alat
-            let alatMap = {};
-            jadwalF.forEach(j => {
-                (db.detail || []).filter(d => d.ID_Jadwal === j.ID_Jadwal).forEach(d => {
-                    let invItem = (db.inventaris || []).find(i => i.ID_Barang === d.ID_Barang);
-                    if (!invItem || invItem.Kategori !== "Bahan") {
-                        if (!alatMap[d.Nama_Barang]) alatMap[d.Nama_Barang] = { frek: 0, qty: 0 };
-                        alatMap[d.Nama_Barang].frek += 1;
-                        alatMap[d.Nama_Barang].qty += (parseInt(d.Jumlah) || 0);
-                    }
-                });
-            });
-            let topAlatArr = Object.entries(alatMap).sort((a, b) => b[1].frek - a[1].frek).slice(0, 8);
-            let tbTopAlat = document.getElementById("tbodyTopAlat"); tbTopAlat.innerHTML = "";
-            topAlatArr.forEach(([nama, val]) => {
-                tbTopAlat.innerHTML += `<tr><td class="p-2.5 font-bold">${nama}</td><td class="p-2.5 text-center">${val.frek}x</td><td class="p-2.5 text-center font-bold text-emerald-700">${val.qty}</td></tr>`;
-            });
-            if (topAlatArr.length === 0) tbTopAlat.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-slate-400 italic">Belum ada data peminjaman alat.</td></tr>`;
-
-            // Top BHP
-            let tbTopBHP = document.getElementById("tbodyTopBHP"); tbTopBHP.innerHTML = "";
-            let topBHPArr = Object.entries(konsumsiBHPMap).sort((a, b) => b[1].terpakai - a[1].terpakai).slice(0, 8);
-            topBHPArr.forEach(([nama, val]) => {
-                tbTopBHP.innerHTML += `<tr><td class="p-2.5 font-bold">${nama}</td><td class="p-2.5 text-center font-bold text-amber-700">${val.terpakai}</td><td class="p-2.5 text-center">${val.sisa}</td></tr>`;
-            });
-            if (topBHPArr.length === 0) tbTopBHP.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-slate-400 italic">Belum ada data konsumsi BHP.</td></tr>`;
-
-            // Render Grafik jika panel grafik aktif atau diminta
-            if (animateCharts || !document.getElementById("subGrafik").classList.contains("hidden")) {
-                renderGrafikLayanan(animateCharts);
-            }
-        }
-
-        function buatAtauUpdateChart(canvasId, config) {
-            let canvas = document.getElementById(canvasId);
-            if (!canvas || typeof Chart === "undefined") return;
-            if (silabCharts[canvasId]) silabCharts[canvasId].destroy();
-            silabCharts[canvasId] = new Chart(canvas.getContext("2d"), config);
-        }
-
-        function renderGrafikLayanan(withAnimation = false) {
-            let { jurnalF, jadwalF, invF } = kumpulkanDataLayanan();
-            let animOpt = withAnimation ? { duration: 400 } : false;
-
-            let fPeriode = document.getElementById("layananFilterPeriode").value;
-            let blnIndices = fPeriode === "ganjil" ? [6,7,8,9,10,11] : (fPeriode === "genap" ? [0,1,2,3,4,5] : [0,1,2,3,4,5,6,7,8,9,10,11]);
-            let blnLabelsFull = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
-            let labelsBln = blnIndices.map(i => blnLabelsFull[i]);
-            let sumberSesi = jurnalF.length > 0 ? jurnalF.map(x => x.Tanggal) : jadwalF.map(x => x.Tgl_Mulai);
-            let dataSesiBln = blnIndices.map(m => sumberSesi.filter(tgl => new Date(tgl).getMonth() === m).length);
-
-            // Grafik 1: Bar Chart Sesi per Bulan
-            buatAtauUpdateChart("chartSesiBulan", {
-                type: "bar",
-                data: { labels: labelsBln, datasets: [{ label: "Jumlah Sesi", data: dataSesiBln, backgroundColor: "#059669", borderRadius: 6 }] },
-                options: { responsive: true, maintainAspectRatio: false, animation: animOpt, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-            });
-
-            // Grafik 2: Line Chart Tren Intensitas
-            buatAtauUpdateChart("chartTrenBulan", {
-                type: "line",
-                data: { labels: labelsBln, datasets: [{ label: "Tren Layanan", data: dataSesiBln, borderColor: "#4f46e5", backgroundColor: "rgba(79,70,229,0.12)", fill: true, tension: 0.35 }] },
-                options: { responsive: true, maintainAspectRatio: false, animation: animOpt, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-            });
-
-            // Grafik 3: Distribusi Tingkat Kelas
-            let kelasLabels = ["Kelas VII", "Kelas VIII", "Kelas IX", "Kelas X", "Kelas XI", "Kelas XII", "Lainnya"];
-            let kelasCount = [0, 0, 0, 0, 0, 0, 0];
-            jurnalF.forEach(j => {
-                let k = String(j.Kelas || "").toUpperCase();
-                if (k.includes("VIII") || k.includes("8")) kelasCount[1]++;
-                else if (k.includes("VII") || k.includes("7")) kelasCount[0]++;
-                else if (k.includes("IX") || k.includes("9")) kelasCount[2]++;
-                else if (k.includes("XII") || k.includes("12")) kelasCount[5]++;
-                else if (k.includes("XI") || k.includes("11")) kelasCount[4]++;
-                else if (k.includes("X") || k.includes("10")) kelasCount[3]++;
-                else kelasCount[6]++;
-            });
-            buatAtauUpdateChart("chartPerKelas", {
-                type: "bar",
-                data: { labels: kelasLabels, datasets: [{ label: "Sesi per Tingkat", data: kelasCount, backgroundColor: ["#10b981","#0d9488","#0284c7","#6366f1","#8b5cf6","#ec4899","#94a3b8"], borderRadius: 6 }] },
-                options: { responsive: true, maintainAspectRatio: false, animation: animOpt, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-            });
-
-            // Grafik 4A: Proporsi Jenis Layanan
-            let jenisMap = { "Praktikum di Lab": 0, "Pinjam ke Kelas": 0, "Pembinaan Olimpiade": 0, "Ekstrakurikuler": 0 };
-            jurnalF.forEach(j => { if (jenisMap[j.Jenis_Layanan] !== undefined) jenisMap[j.Jenis_Layanan]++; else jenisMap["Praktikum di Lab"]++; });
-            buatAtauUpdateChart("chartJenisLayanan", {
-                type: "pie",
-                data: { labels: Object.keys(jenisMap), datasets: [{ data: Object.values(jenisMap), backgroundColor: ["#059669","#f59e0b","#3b82f6","#8b5cf6"] }] },
-                options: { responsive: true, maintainAspectRatio: false, animation: animOpt, plugins: { title: { display: true, text: "Jenis Layanan", font: { size: 11 } }, legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 9 } } } } }
-            });
-
-            // Grafik 4B: Kelayakan Alat
-            let baikCnt = invF.filter(i => i.Kondisi === "Baik").length;
-            let rusakCnt = invF.length - baikCnt;
-            buatAtauUpdateChart("chartKelayakanAlat", {
-                type: "doughnut",
-                data: { labels: ["Baik", "Rusak"], datasets: [{ data: [baikCnt, rusakCnt], backgroundColor: ["#10b981","#ef4444"] }] },
-                options: { responsive: true, maintainAspectRatio: false, animation: animOpt, plugins: { title: { display: true, text: "Kelayakan Aset", font: { size: 11 } }, legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 9 } } } } }
-            });
-
-            // Grafik 5: Realisasi Program
-            let totalSesi = jurnalF.length > 0 ? jurnalF.length : jadwalF.length;
-            let targetSesi = parseInt(getSetting("Target_Sesi_Semester")) || 24;
-            let sisaTarget = Math.max(0, targetSesi - totalSesi);
-            buatAtauUpdateChart("chartRealisasiProgram", {
-                type: "doughnut",
-                data: { labels: ["Terlaksana", "Sisa Target"], datasets: [{ data: [totalSesi, sisaTarget], backgroundColor: ["#4f46e5","#e2e8f0"] }] },
-                options: { responsive: true, maintainAspectRatio: false, animation: animOpt, plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 10 } } } } }
-            });
-        }
-
-        // --- TTD KHUSUS DOKUMEN ADMINISTRASI (KEPALA MADRASAH + KEPALA LAB) ---
-        function getTTDLayananHtml() {
-            let isMTs = curUser.Unit === "MTs";
-            let namaKepLab = getSetting(isMTs ? "Kepala_Lab_MTs" : "Kepala_Lab_MA");
-            let namaKepMad = getSetting(isMTs ? "Kepala_Madrasah_MTs" : "Kepala_Madrasah_MA");
-            if (namaKepMad === "Nama Belum Diatur") namaKepMad = isMTs ? "Agung Hidayatullah, S.Sos.I." : "____________________";
-            let dateStr = formatDateStr(new Date().toISOString());
-            return `<table class="ttd-table" style="margin-top:35px;"><tr>
-                <td>Mengetahui,<br>Kepala Madrasah (${curUser.Unit})<br><br><br><br><br><span class="ttd-name">${namaKepMad}</span></td>
-                <td>Bandung, ${dateStr}<br>Kepala Laboratorium (${curUser.Unit})<br><br><br><br><br><span class="ttd-name">${namaKepLab}</span></td>
-            </tr></table>`;
-        }
-
-        // --- CETAK MASING-MASING BUKU / JURNAL ---
-        function cetakBukuLayanan(jenis) {
-            let { jurnalF, jadwalF, tamuF, logF, laporF } = kumpulkanDataLayanan();
-            let pLabel = document.getElementById("layananFilterPeriode").selectedOptions[0].text;
-            let tLabel = document.getElementById("layananFilterTahun").value;
-            let html = "";
-
-            if (jenis === "jurnal") {
-                html = `<h3 class="text-center" style="margin-bottom:4px;">BUKU / JURNAL LAYANAN LABORATORIUM IPA</h3><p class="text-center" style="margin-top:0;font-size:11px;">Periode: ${pLabel} (${tLabel})</p>
-                <table><thead><tr><th>No</th><th>Hari / Tanggal</th><th>Jam Ke-</th><th>Kelas</th><th>Mata Pelajaran / Topik Praktikum</th><th>Nama Guru Pengampu</th><th>Jml Siswa</th><th>Jenis Layanan</th><th>Kondisi Akhir / Catatan</th><th>Paraf Guru</th></tr></thead><tbody>`;
-                jurnalF.forEach((j, i) => {
-                    html += `<tr><td class="text-center">${i+1}</td><td>${formatHariTanggal(j.Tanggal)}</td><td class="text-center">${j.Jam_Ke}</td><td class="text-center">${j.Kelas}</td><td>${j.Mapel_Topik}</td><td>${j.Guru_Pengampu}</td><td class="text-center">${j.Jumlah_Siswa}</td><td>${j.Jenis_Layanan}</td><td>${j.Kondisi_Catatan || '-'}</td><td style="height:28px;"></td></tr>`;
-                });
-                if (jurnalF.length === 0) html += `<tr><td colspan="10" class="text-center">Belum ada catatan jurnal.</td></tr>`;
-                html += `</tbody></table>`;
-            } else if (jenis === "alat") {
-                html = `<h3 class="text-center" style="margin-bottom:4px;">BUKU PEMINJAMAN DAN PENGEMBALIAN ALAT</h3><p class="text-center" style="margin-top:0;font-size:11px;">Periode: ${pLabel} (${tLabel})</p>
-                <table><thead><tr><th>No</th><th>Tgl Pinjam &ndash; Kembali</th><th>Peminjam (Unit)</th><th>Spesifikasi &amp; Jumlah Alat</th><th>Keperluan</th><th>Kondisi Kembali</th></tr></thead><tbody>`;
-                let no = 0;
-                jadwalF.forEach(j => {
-                    let alat = (db.detail || []).filter(d => d.ID_Jadwal === j.ID_Jadwal).map(d => `${d.Nama_Barang} (${d.Jumlah})`).join(", ");
-                    if (!alat) return; no++;
-                    let lap = (db.laporan || []).find(l => l.ID_Jadwal === j.ID_Jadwal);
-                    html += `<tr><td class="text-center">${no}</td><td>${formatDateStr(j.Tgl_Mulai)} s.d ${formatDateStr(j.Tgl_Selesai)}</td><td>${j.Peminjam} (${j.Unit})</td><td>${alat}</td><td>${j.Keperluan}</td><td>${lap ? lap.Kondisi_Bahan_Alat : j.Status_Global}</td></tr>`;
-                });
-                if (no === 0) html += `<tr><td colspan="6" class="text-center">Belum ada data peminjaman alat.</td></tr>`;
-                html += `</tbody></table>`;
-            } else if (jenis === "bhp") {
-                html = `<h3 class="text-center" style="margin-bottom:4px;">JURNAL PENGGUNAAN BAHAN HABIS PAKAI (BHP)</h3><p class="text-center" style="margin-top:0;font-size:11px;">Periode: ${pLabel} (${tLabel})</p>
-                <table><thead><tr><th>No</th><th>Tanggal</th><th>Nama Bahan</th><th>Kepemilikan</th><th>Jumlah Digunakan</th><th>Sisa Stok</th><th>Pengguna / Keperluan</th></tr></thead><tbody>`;
-                let no = 0;
-                jadwalF.forEach(j => {
-                    (db.detail || []).filter(d => d.ID_Jadwal === j.ID_Jadwal).forEach(d => {
-                        let inv = (db.inventaris || []).find(i => i.ID_Barang === d.ID_Barang);
-                        if (inv && inv.Kategori === "Bahan") {
-                            no++;
-                            html += `<tr><td class="text-center">${no}</td><td>${formatDateStr(j.Tgl_Mulai)}</td><td>${d.Nama_Barang}</td><td class="text-center">${d.Kepemilikan}</td><td class="text-center">${d.Jumlah} ${inv.Satuan}</td><td class="text-center">${inv.Stok} ${inv.Satuan}</td><td>${j.Peminjam.split(" (")[0]} - ${j.Keperluan}</td></tr>`;
-                        }
-                    });
-                });
-                if (no === 0) html += `<tr><td colspan="7" class="text-center">Belum ada catatan penggunaan BHP.</td></tr>`;
-                html += `</tbody></table>`;
-            } else if (jenis === "insiden") {
-                html = `<h3 class="text-center" style="margin-bottom:4px;">BUKU CATATAN INSIDEN, KERUSAKAN &amp; PEMELIHARAAN (K3)</h3><p class="text-center" style="margin-top:0;font-size:11px;">Periode: ${pLabel} (${tLabel})</p>
-                <table><thead><tr><th>No</th><th>Tanggal</th><th>Jenis Catatan</th><th>Alat / Pelapor</th><th>Uraian &amp; Tindakan</th><th>Status</th></tr></thead><tbody>`;
-                let no = 0;
-                laporF.filter(l => l.Insiden_Kecelakaan && l.Insiden_Kecelakaan !== "Tidak Ada").forEach(l => {
-                    no++; html += `<tr><td class="text-center">${no}</td><td>${formatDateStr(l.Tanggal_Lapor)}</td><td>Insiden (${l.Insiden_Kecelakaan})</td><td>${l.Peminjam}</td><td>${l.Kronologi_Insiden || l.Kondisi_Bahan_Alat}</td><td>Dilaporkan</td></tr>`;
-                });
-                logF.forEach(p => {
-                    no++; html += `<tr><td class="text-center">${no}</td><td>${formatDateStr(p.Tanggal)}</td><td>${p.Jenis_Catatan}</td><td>${p.Nama_Alat} (${p.Unit})</td><td>${p.Deskripsi_Tindakan}</td><td>${p.Status}</td></tr>`;
-                });
-                if (no === 0) html += `<tr><td colspan="6" class="text-center">Nihil insiden dan kerusakan.</td></tr>`;
-                html += `</tbody></table>`;
-            } else if (jenis === "tamu") {
-                html = `<h3 class="text-center" style="margin-bottom:4px;">BUKU KUNJUNGAN / TAMU LABORATORIUM</h3><p class="text-center" style="margin-top:0;font-size:11px;">Periode: ${pLabel} (${tLabel})</p>
-                <table><thead><tr><th>No</th><th>Tanggal</th><th>Nama Pengunjung</th><th>Jabatan / Instansi</th><th>Keperluan</th><th>Kesan / Rekomendasi</th><th>Paraf</th></tr></thead><tbody>`;
-                tamuF.forEach((t, i) => {
-                    html += `<tr><td class="text-center">${i+1}</td><td>${formatDateStr(t.Tanggal)}</td><td>${t.Nama_Tamu}</td><td>${t.Instansi_Jabatan}</td><td>${t.Keperluan}</td><td>${t.Kesan_Pesan || '-'}</td><td style="height:28px;"></td></tr>`;
-                });
-                if (tamuF.length === 0) html += `<tr><td colspan="7" class="text-center">Belum ada catatan tamu.</td></tr>`;
-                html += `</tbody></table>`;
-            }
-            executePrint(html + getTTDLayananHtml());
-        }
-
-        // --- CETAK PAKET REKAP DATA + GRAFIK VISUALISASI (DISPLAY LAB / AKREDITASI) ---
-        function cetakPaketLayananLengkap() {
-            // Pastikan seluruh grafik telah dirender sebelum dikonversi ke PNG
-            renderGrafikLayanan(false);
-            setTimeout(() => {
-                let pLabel = document.getElementById("layananFilterPeriode").selectedOptions[0].text;
-                let tLabel = document.getElementById("layananFilterTahun").value;
-                let uLabel = document.getElementById("layananFilterUnit").value;
-
-                let img1 = silabCharts["chartSesiBulan"] ? silabCharts["chartSesiBulan"].toBase64Image() : "";
-                let img2 = silabCharts["chartTrenBulan"] ? silabCharts["chartTrenBulan"].toBase64Image() : "";
-                let img3 = silabCharts["chartPerKelas"] ? silabCharts["chartPerKelas"].toBase64Image() : "";
-                let img4 = silabCharts["chartKelayakanAlat"] ? silabCharts["chartKelayakanAlat"].toBase64Image() : "";
-                let img5 = silabCharts["chartRealisasiProgram"] ? silabCharts["chartRealisasiProgram"].toBase64Image() : "";
-
-                let html = `
-                    <h3 class="text-center" style="margin-bottom:4px;">LAPORAN DATA &amp; GRAFIK LAYANAN LABORATORIUM IPA</h3>
-                    <p class="text-center" style="margin-top:0;font-size:11px;">Periode: ${pLabel} | Tahun: ${tLabel} | Unit: ${uLabel}</p>
-                    <table>
-                        <thead><tr><th>Total Sesi Layanan</th><th>Keterlaksanaan Program</th><th>Total Siswa Terlayani</th><th>Kelayakan Aset</th></tr></thead>
-                        <tbody><tr>
-                            <td class="text-center"><b>${document.getElementById("kpiTotalSesi").textContent} Sesi</b></td>
-                            <td class="text-center"><b>${document.getElementById("kpiRealisasi").textContent}</b><br><small>${document.getElementById("kpiTargetInfo").textContent}</small></td>
-                            <td class="text-center"><b>${document.getElementById("kpiTotalSiswa").textContent} Siswa</b></td>
-                            <td class="text-center"><b>${document.getElementById("kpiKelayakan").textContent}</b><br><small>${document.getElementById("kpiKondisiInfo").textContent}</small></td>
-                        </tr></tbody>
-                    </table>
-                    <table style="border:none;">
-                        <tr>
-                            <td style="width:50%; text-align:center; padding:8px;"><b>1. Sesi Layanan per Bulan</b><br><img src="${img1}" style="width:100%; max-height:210px; object-fit:contain; margin-top:6px;"></td>
-                            <td style="width:50%; text-align:center; padding:8px;"><b>2. Tren Intensitas Layanan</b><br><img src="${img2}" style="width:100%; max-height:210px; object-fit:contain; margin-top:6px;"></td>
-                        </tr>
-                        <tr>
-                            <td style="width:50%; text-align:center; padding:8px;"><b>3. Distribusi per Tingkat Kelas</b><br><img src="${img3}" style="width:100%; max-height:210px; object-fit:contain; margin-top:6px;"></td>
-                            <td style="width:50%; text-align:center; padding:8px;"><b>4. Kelayakan Aset &amp; Realisasi Program</b><br>
-                                <img src="${img4}" style="width:46%; max-height:170px; object-fit:contain; display:inline-block;">
-                                <img src="${img5}" style="width:46%; max-height:170px; object-fit:contain; display:inline-block;">
-                            </td>
-                        </tr>
-                    </table>
-                ` + getTTDLayananHtml();
-                executePrint(html);
-            }, 350);
-        }
-    </script>
-</body>
-</html>
+        function addToCart(id, nama, milik, kat, max) { let ex = cart.find(c => c.id_barang === id); if(ex) { if(ex.jumlah < max) ex.jumlah
