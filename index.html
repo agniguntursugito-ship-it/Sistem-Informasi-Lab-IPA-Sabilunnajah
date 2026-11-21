@@ -201,11 +201,12 @@
                                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
                                     <div>
                                         <h4 class="font-bold text-slate-800">Jurnal Penggunaan Ruang / Kegiatan Praktikum</h4>
-                                        <p class="text-[11px] text-slate-500">Terisi otomatis saat booking user disetujui. Admin dapat mengedit data, atau menambah catatan manual.</p>
+                                        <p class="text-[11px] text-slate-500">Terisi otomatis saat booking user disetujui. Form manual kini mendukung rentang waktu mulai–selesai dan kegiatan Non-KBM.</p>
                                     </div>
                                     <button onclick="cetakBukuLayanan('jurnal')" class="bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-xl text-xs font-bold">🖨️ Cetak Buku Jurnal</button>
                                 </div>
 
+                                <!-- [UPDATE V17] Form Jurnal Manual: Rentang Tanggal, Jam Mulai-Selesai & Non-KBM -->
                                 <form id="formEntriJurnal" onsubmit="simpanEntriJurnal(event)" class="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3">
                                     <input type="hidden" id="jrnMode" value="add">
                                     <input type="hidden" id="jrnID" value="">
@@ -218,31 +219,59 @@
                                             </select>
                                         </div>
                                     </div>
+
                                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Tanggal</label><input id="jrnTgl" type="date" required class="w-full border p-2 text-xs rounded-xl bg-white"></div>
-                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Jam Ke- / Waktu</label><input id="jrnJam" type="text" required placeholder="cth: 3-4 / 08:30-10:00" class="w-full border p-2 text-xs rounded-xl bg-white"></div>
-                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Jumlah Siswa</label><input id="jrnSiswa" type="number" min="0" required placeholder="cth: 27" class="w-full border p-2 text-xs rounded-xl bg-white"></div>
-                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Unit</label><select id="jrnUnit" class="w-full border p-2 text-xs rounded-xl bg-white"><option value="MTs">MTs</option><option value="MA">MA</option></select></div>
+                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Dari Tanggal</label><input id="jrnTgl" type="date" required onchange="if(!document.getElementById('jrnTglSelesai').value) document.getElementById('jrnTglSelesai').value=this.value;" class="w-full border p-2 text-xs rounded-xl bg-white"></div>
+                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Sampai Tanggal</label><input id="jrnTglSelesai" type="date" required class="w-full border p-2 text-xs rounded-xl bg-white"></div>
+                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Jam Mulai</label><input id="jrnJamMulai" type="time" required class="w-full border p-2 text-xs rounded-xl bg-white"></div>
+                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Jam Selesai</label><input id="jrnJamSelesai" type="time" required class="w-full border p-2 text-xs rounded-xl bg-white"></div>
                                     </div>
-                                    <div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                        <div>
+                                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Keperluan / Jenis Layanan</label>
+                                            <select id="jrnJenis" onchange="toggleNonKBMField('jrnJenis','jrnSiswaWrap','jrnSiswa','jrnKelasWrap')" class="w-full border p-2 text-xs rounded-xl bg-white">
+                                                <option value="Praktikum di Lab">Praktikum di Lab</option>
+                                                <option value="Pinjam ke Kelas">Pinjam ke Kelas</option>
+                                                <option value="Pembinaan Olimpiade">Pembinaan Olimpiade</option>
+                                                <option value="Ekstrakurikuler">Ekstrakurikuler</option>
+                                                <option value="Ujian Praktik">Ujian Praktik</option>
+                                                <option value="Non-KBM (Rapat/Gudang/Panitia)">Non-KBM (Rapat/Gudang/Panitia)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Guru / Penanggung Jawab</label>
+                                            <input id="jrnGuru" type="text" list="listNamaGuru" required placeholder="Nama Guru / PJ" class="w-full border p-2 text-xs rounded-xl bg-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Unit</label>
+                                            <select id="jrnUnit" class="w-full border p-2 text-xs rounded-xl bg-white"><option value="MTs">MTs</option><option value="MA">MA</option></select>
+                                        </div>
+                                        <div id="jrnSiswaWrap">
+                                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Jumlah Siswa</label>
+                                            <input id="jrnSiswa" type="number" min="1" required placeholder="cth: 27" class="w-full border p-2 text-xs rounded-xl bg-white">
+                                        </div>
+                                    </div>
+
+                                    <div id="jrnKelasWrap">
                                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Pilih Kelas (Multi-Choice dari Pengaturan)</label>
                                         <div id="jrnKelasCheckboxes" class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto custom-scroll p-2 bg-white border rounded-xl"></div>
                                         <input id="jrnKelasCustom" type="text" placeholder="Atau ketik kelas tambahan (opsional, pisahkan koma)..." class="w-full border p-1.5 text-[11px] rounded-lg bg-white mt-1.5 outline-none">
                                     </div>
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Topik / Materi Praktikum</label><input id="jrnTopik" type="text" required placeholder="cth: IPA / Uji Kandungan Makanan" class="w-full border p-2 text-xs rounded-xl bg-white"></div>
-                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Guru Pengampu</label><input id="jrnGuru" type="text" list="listNamaGuru" required placeholder="Nama Guru" class="w-full border p-2 text-xs rounded-xl bg-white"></div>
-                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Keperluan / Jenis Layanan</label><select id="jrnJenis" class="w-full border p-2 text-xs rounded-xl bg-white"><option value="Praktikum di Lab">Praktikum di Lab</option><option value="Pinjam ke Kelas">Pinjam ke Kelas</option><option value="Pembinaan Olimpiade">Pembinaan Olimpiade</option><option value="Ekstrakurikuler">Ekstrakurikuler</option><option value="Ujian Praktik">Ujian Praktik</option></select></div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Topik / Materi / Nama Kegiatan</label><input id="jrnTopik" type="text" required placeholder="cth: Uji Kandungan Makanan / Penyimpanan Buku ASAS" class="w-full border p-2 text-xs rounded-xl bg-white"></div>
+                                        <div><label class="block text-[10px] font-bold text-slate-500 mb-1">Kondisi Akhir / Catatan</label><input id="jrnCatatan" type="text" placeholder="cth: Ruang bersih, alat lengkap" class="w-full border p-2 text-xs rounded-xl bg-white"></div>
                                     </div>
-                                    <div class="flex flex-col md:flex-row gap-3">
-                                        <input id="jrnCatatan" type="text" placeholder="Kondisi Akhir / Catatan (cth: Alat lengkap, 1 tabung reaksi retak)" class="flex-grow border p-2 text-xs rounded-xl bg-white">
-                                        <button id="btnSimpanJurnal" type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl text-xs font-bold shrink-0">Simpan ke Jurnal</button>
+
+                                    <div class="flex justify-end">
+                                        <button id="btnSimpanJurnal" type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm">Simpan ke Jurnal</button>
                                     </div>
                                 </form>
 
                                 <div class="overflow-x-auto rounded-2xl border border-slate-100">
                                     <table class="w-full text-left text-xs border-collapse">
-                                        <thead><tr class="bg-slate-50 text-slate-500 text-[10px] uppercase border-b"><th class="p-3">No</th><th class="p-3">Hari / Tanggal</th><th class="p-3">Jam Ke-</th><th class="p-3">Kelas</th><th class="p-3">Topik / Materi</th><th class="p-3">Guru Pengampu</th><th class="p-3 text-center">Siswa</th><th class="p-3">Keperluan / Layanan</th><th class="p-3">Kondisi / Catatan</th><th class="p-3 text-right">Aksi</th></tr></thead>
+                                        <thead><tr class="bg-slate-50 text-slate-500 text-[10px] uppercase border-b"><th class="p-3">No</th><th class="p-3">Hari / Tanggal</th><th class="p-3">Waktu / Jam</th><th class="p-3">Kelas</th><th class="p-3">Topik / Kegiatan</th><th class="p-3">Guru / PJ</th><th class="p-3 text-center">Siswa</th><th class="p-3">Keperluan / Layanan</th><th class="p-3">Kondisi / Catatan</th><th class="p-3 text-right">Aksi</th></tr></thead>
                                         <tbody id="tbodyJurnalRuang" class="divide-y divide-slate-50"></tbody>
                                     </table>
                                 </div>
@@ -423,7 +452,7 @@
                             </div>
                             <div class="bg-white p-6 rounded-3xl shadow-soft border">
                                 <h4 class="font-bold text-slate-800 text-sm mb-1">Grafik 4: Proporsi Jenis Layanan &amp; Kelayakan Alat</h4>
-                                <p class="text-[11px] text-slate-400 mb-4">Komposisi layanan praktikum serta persentase kondisi aset.</p>
+                                <p class="text-[11px] text-slate-400 mb-4">Komposisi layanan praktikum, non-KBM, serta kondisi aset.</p>
                                 <div class="grid grid-cols-2 gap-3 h-64">
                                     <div class="relative"><canvas id="chartJenisLayanan"></canvas></div>
                                     <div class="relative"><canvas id="chartKelayakanAlat"></canvas></div>
@@ -440,7 +469,7 @@
                         </div>
                     </div>
                 </div>
-<!-- [AKHIR BAGIAN 1 - LANJUTKAN PASTE BAGIAN 2 TEPAT DI BAWAH BARIS INI] -->
+<!-- [AKHIR BAGIAN 1 V17 - LANJUTKAN PASTE BAGIAN 2 TEPAT DI BAWAH BARIS INI] -->
                 <!-- ADMIN: JADWAL & KALENDER -->
                 <div class="admin-tab hidden space-y-6" id="tabJadwal">
                     <div class="bg-white p-6 rounded-3xl shadow-soft border border-amber-100">
@@ -456,7 +485,7 @@
                     
                     <div class="bg-white p-6 rounded-3xl shadow-soft border">
                         <h3 class="text-xl font-bold text-slate-800 mb-2 flex gap-2 items-center"><span class="text-emerald-500">📅</span> Kalender Jadwal Aktif (Bulan Ini)</h3>
-                        <p class="text-xs text-slate-500 mb-6">Admin dapat mengedit data booking user atau membatalkannya sepihak dari tabel bawah.</p>
+                        <p class="text-xs text-slate-500 mb-6">Klik tanggal atau kotak jadwal di kalender untuk melihat detail lengkap aktivitas lab. Gunakan tabel bawah untuk mengedit atau membatalkan.</p>
                         <div id="adminCalendarGrid" class="mb-8 border rounded-xl overflow-hidden shadow-sm bg-slate-50 p-2 text-sm"></div>
                         
                         <div class="overflow-x-auto rounded-2xl border border-slate-100">
@@ -571,36 +600,38 @@
                                 <form class="space-y-4" id="formCheckout" onsubmit="submitCheckout(event)">
                                     <div class="bg-slate-50/50 p-4 rounded-2xl border space-y-3.5">
                                         <div class="grid grid-cols-2 gap-3">
-                                            <div><label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Dari Tanggal</label><input class="w-full border px-3 py-2 text-xs rounded-xl outline-none bg-white" id="outTglMulai" onchange="renderGuruKatalog()" required type="date"></div>
+                                            <div><label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Dari Tanggal</label><input class="w-full border px-3 py-2 text-xs rounded-xl outline-none bg-white" id="outTglMulai" onchange="if(!document.getElementById('outTglSelesai').value) document.getElementById('outTglSelesai').value=this.value; renderGuruKatalog();" required type="date"></div>
                                             <div><label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Sampai Tanggal</label><input class="w-full border px-3 py-2 text-xs rounded-xl outline-none bg-white" id="outTglSelesai" onchange="renderGuruKatalog()" required type="date"></div>
                                         </div>
                                         <div class="grid grid-cols-2 gap-3">
                                             <div><label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Jam Mulai</label><input class="w-full border px-3 py-2 text-xs rounded-xl outline-none bg-white" id="outJamMulai" required type="time"></div>
                                             <div><label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Jam Selesai</label><input class="w-full border px-3 py-2 text-xs rounded-xl outline-none bg-white" id="outJamSelesai" required type="time"></div>
                                         </div>
+                                        <!-- [UPDATE V17] Opsi Non-KBM (tanpa input jumlah siswa & kelas) -->
                                         <div class="grid grid-cols-3 gap-2">
                                             <div class="col-span-2">
                                                 <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Keperluan / Layanan</label>
-                                                <select id="outKeperluan" required class="w-full border px-2.5 py-2 text-xs rounded-xl outline-none bg-white">
+                                                <select id="outKeperluan" onchange="toggleNonKBMField('outKeperluan','outSiswaWrap','outJmlSiswa','outKelasWrap')" required class="w-full border px-2.5 py-2 text-xs rounded-xl outline-none bg-white">
                                                     <option value="Praktikum di Lab">Praktikum di Lab</option>
                                                     <option value="Pinjam ke Kelas">Pinjam ke Kelas</option>
                                                     <option value="Pembinaan Olimpiade">Pembinaan Olimpiade</option>
                                                     <option value="Ekstrakurikuler">Ekstrakurikuler</option>
                                                     <option value="Ujian Praktik">Ujian Praktik</option>
+                                                    <option value="Non-KBM (Rapat/Gudang/Panitia)">Non-KBM (Rapat/Gudang/Panitia)</option>
                                                 </select>
                                             </div>
-                                            <div>
+                                            <div id="outSiswaWrap">
                                                 <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Jml Siswa</label>
                                                 <input class="w-full border px-2.5 py-2 text-xs rounded-xl outline-none bg-white" id="outJmlSiswa" min="1" placeholder="cth: 27" required type="number">
                                             </div>
                                         </div>
-                                        <div>
+                                        <div id="outKelasWrap">
                                             <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Pilih Kelas (Bisa Pilih Banyak)</label>
                                             <div id="outKelasCheckboxes" class="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto custom-scroll p-2 bg-white border rounded-xl"></div>
                                         </div>
                                         <div>
-                                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Topik / Materi Praktikum</label>
-                                            <textarea class="w-full border px-3 py-2 text-xs rounded-xl outline-none bg-white" id="outTopik" placeholder="cth: IPA / Uji Kandungan Makanan" required rows="2"></textarea>
+                                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Topik / Materi / Keterangan Kegiatan</label>
+                                            <textarea class="w-full border px-3 py-2 text-xs rounded-xl outline-none bg-white" id="outTopik" placeholder="cth: IPA / Uji Kandungan Makanan atau Rapat Panitia ASAS" required rows="2"></textarea>
                                         </div>
                                     </div>
                                     <div class="pt-1">
@@ -642,8 +673,8 @@
                         <div class="flex items-center gap-3 mb-6">
                             <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-lg shadow-inner">📅</div>
                             <div>
-                                <h3 class="text-lg font-bold text-slate-800">Kalender Praktikum (Bulan Ini)</h3>
-                                <p class="text-xs text-slate-500">Menampilkan jadwal yang telah disetujui (Rentang Waktu).</p>
+                                <h3 class="text-lg font-bold text-slate-800">Kalender Aktivitas Laboratorium (Bulan Ini)</h3>
+                                <p class="text-xs text-slate-500">Klik pada tanggal atau kotak nama di kalender untuk melihat detail lengkap kegiatan, jam, kelas, dan alat yang dipakai.</p>
                             </div>
                         </div>
                         <div id="guruCalendarGrid" class="mb-6 border rounded-xl overflow-hidden shadow-sm bg-slate-50 p-2 text-sm"></div>
@@ -742,7 +773,7 @@
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
-                        <div><label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Dari Tanggal</label><input id="admJdwTglM" type="date" required class="w-full border p-2 text-xs rounded-xl"></div>
+                        <div><label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Dari Tanggal</label><input id="admJdwTglM" type="date" required onchange="if(!document.getElementById('admJdwTglS').value) document.getElementById('admJdwTglS').value=this.value;" class="w-full border p-2 text-xs rounded-xl"></div>
                         <div><label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Sampai Tanggal</label><input id="admJdwTglS" type="date" required class="w-full border p-2 text-xs rounded-xl"></div>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
@@ -752,26 +783,27 @@
                     <div class="grid grid-cols-3 gap-3">
                         <div class="col-span-2">
                             <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Keperluan / Jenis Layanan</label>
-                            <select id="admJdwKeperluan" class="w-full border p-2.5 text-xs rounded-xl bg-white">
+                            <select id="admJdwKeperluan" onchange="toggleNonKBMField('admJdwKeperluan','admJdwSiswaWrap','admJdwSiswa','admJdwKelasWrap')" class="w-full border p-2.5 text-xs rounded-xl bg-white">
                                 <option value="Praktikum di Lab">Praktikum di Lab</option>
                                 <option value="Pinjam ke Kelas">Pinjam ke Kelas</option>
                                 <option value="Pembinaan Olimpiade">Pembinaan Olimpiade</option>
                                 <option value="Ekstrakurikuler">Ekstrakurikuler</option>
                                 <option value="Ujian Praktik">Ujian Praktik</option>
+                                <option value="Non-KBM (Rapat/Gudang/Panitia)">Non-KBM (Rapat/Gudang/Panitia)</option>
                             </select>
                         </div>
-                        <div>
+                        <div id="admJdwSiswaWrap">
                             <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Jml Siswa</label>
                             <input id="admJdwSiswa" type="number" min="0" required placeholder="27" class="w-full border p-2.5 text-xs rounded-xl">
                         </div>
                     </div>
-                    <div>
+                    <div id="admJdwKelasWrap">
                         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Pilih Kelas (Multi-Choice)</label>
                         <div id="admJdwKelasCheckboxes" class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto custom-scroll p-2 bg-slate-50 border rounded-xl"></div>
                     </div>
                     <div>
-                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Topik / Materi Praktikum</label>
-                        <textarea id="admJdwTopik" rows="2" required placeholder="Topik / Materi..." class="w-full border p-2.5 text-xs rounded-xl outline-none"></textarea>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Topik / Materi / Keterangan Kegiatan</label>
+                        <textarea id="admJdwTopik" rows="2" required placeholder="Topik / Materi / Nama Kegiatan..." class="w-full border p-2.5 text-xs rounded-xl outline-none"></textarea>
                     </div>
                     <div id="admJdwItemSection" class="bg-slate-50 border p-3 rounded-xl space-y-2">
                         <div class="flex justify-between items-center">
@@ -786,6 +818,47 @@
                     </div>
                     <button id="btnSimpanJadwalAdmin" type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl text-sm font-bold shadow-md mt-2">Simpan Peminjaman</button>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- [BARU V17] Modal Detail Aktivitas Kalender -->
+    <div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[125] flex items-center justify-center px-4 animate-fade-in" id="modalDetailKalender" onclick="if(event.target===this) this.classList.add('hidden')">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg p-6 md:p-8 max-h-[88vh] flex flex-col">
+            <div class="flex justify-between items-start gap-3 mb-4 pb-3 border-b">
+                <div>
+                    <span class="inline-block bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase mb-1">Detail Jadwal Lab</span>
+                    <h3 id="detailKalenderTitle" class="text-lg font-bold text-slate-800">Aktivitas Laboratorium</h3>
+                </div>
+                <button class="text-slate-400 hover:text-slate-700 font-bold text-xl" onclick="document.getElementById('modalDetailKalender').classList.add('hidden')">X</button>
+            </div>
+            <div id="detailKalenderBody" class="overflow-y-auto custom-scroll space-y-3 pr-1 flex-grow text-xs"></div>
+            <button class="mt-5 w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl text-xs font-bold" onclick="document.getElementById('modalDetailKalender').classList.add('hidden')">Tutup</button>
+        </div>
+    </div>
+
+    <!-- [BARU V17] Modal Peringatan Kebersihan & Kerapian Setelah Kirim Pengajuan -->
+    <div class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[130] flex items-center justify-center px-4 animate-fade-in" id="modalPeringatanBersih">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 md:p-8 border-t-4 border-amber-500">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-2xl shrink-0">🧹</div>
+                <div>
+                    <h3 class="font-bold text-lg text-slate-800 leading-tight">Pengajuan Terkirim!</h3>
+                    <p class="text-[11px] font-bold text-amber-700 uppercase">Peringatan Wajib Penggunaan Lab</p>
+                </div>
+            </div>
+            <div class="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 text-xs text-slate-700 space-y-2 leading-relaxed">
+                <p class="font-bold text-amber-900">Mohon diperhatikan setelah selesai menggunakan Laboratorium IPA:</p>
+                <ul class="list-disc pl-5 space-y-1.5">
+                    <li><b>Bersihkan dan rapikan kembali ruang laboratorium</b> (meja praktikum, kursi, lantai, papan tulis, dan buang sampah pada tempatnya).</li>
+                    <li><b>Cuci, keringkan, dan kembalikan</b> seluruh barang, alat, bahan, serta perlengkapan lain ke posisi semula dalam keadaan rapi dan lengkap.</li>
+                    <li>Pastikan <b>keran air, saklar listrik, lampu, dan AC/kipas</b> dimatikan sebelum meninggalkan ruangan.</li>
+                    <li>Segera isi <b>Laporan Pasca-Praktikum</b> di menu Riwayat Saya setelah kegiatan selesai.</li>
+                </ul>
+            </div>
+            <div class="flex flex-col gap-2 mt-5">
+                <button type="button" onclick="lanjutKonfirmasiWAPascaPeringatan()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl text-xs font-bold shadow-md">✅ Saya Paham &amp; Konfirmasi ke Admin (WA)</button>
+                <button type="button" onclick="document.getElementById('modalPeringatanBersih').classList.add('hidden')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 py-2.5 rounded-xl text-xs font-bold">Tutup Tanpa Membuka WA</button>
             </div>
         </div>
     </div>
@@ -841,7 +914,7 @@
     <div class="hidden" id="printArea">
         <div id="printContent"></div>
     </div>
-<!-- [AKHIR BAGIAN 2 - LANJUTKAN PASTE BAGIAN 3 TEPAT DI BAWAH BARIS INI] -->
+<!-- [AKHIR BAGIAN 2 V17 - LANJUTKAN PASTE BAGIAN 3 TEPAT DI BAWAH BARIS INI] -->
     <script>
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         const API_URL = "https://script.google.com/macros/s/AKfycbxuQxlTW531Ccu5j9roNdApUud-aZ5IezRctro-wstU1qpwYW-ChsnQQM2MTP8OPBHC/exec";
@@ -856,9 +929,10 @@
         let silabCharts = {};
         let lastRenderedKelasStr = "";
         let admManualCart = {};
+        let pendingWALink = "";
 
         // ============================================================
-        // 1. HELPER TANGGAL, KELAS DINAMIS & UTILITAS
+        // 1. HELPER TANGGAL, FORMAT JAM TEKS, NON-KBM & KELAS DINAMIS
         // ============================================================
         function parseDateAman(dateVal) {
             if (!dateVal) return null;
@@ -889,6 +963,58 @@
             } catch (e) { return String(dateStr); }
         }
 
+        // Pengaman tampilan jam di Frontend (jaga-jaga jika ada sisa format ISO 1899)
+        function formatJamTeksClient(val) {
+            if (val === null || val === undefined || val === "") return "";
+            let s = String(val).trim();
+            if (!s) return "";
+            if (s.startsWith("'")) s = s.substring(1);
+            if (s.includes("T") && (s.startsWith("1899-") || s.startsWith("1900-") || s.endsWith("Z"))) {
+                let d = new Date(s);
+                if (!isNaN(d.getTime())) {
+                    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                }
+            }
+            return s;
+        }
+
+        function pecahRentangJam(jamStr) {
+            let s = formatJamTeksClient(jamStr);
+            let matches = s.match(/\d{1,2}:\d{2}/g);
+            if (matches && matches.length >= 2) {
+                let norm = t => t.split(":").map(p => p.padStart(2, "0")).join(":");
+                return { mulai: norm(matches[0]), selesai: norm(matches[1]) };
+            }
+            if (matches && matches.length === 1) {
+                let norm = t => t.split(":").map(p => p.padStart(2, "0")).join(":");
+                return { mulai: norm(matches[0]), selesai: "" };
+            }
+            return { mulai: "", selesai: "" };
+        }
+
+        function isKeperluanNonKBM(val) {
+            return String(val || "").toLowerCase().includes("non-kbm");
+        }
+
+        function toggleNonKBMField(selectId, siswaWrapId, siswaInputId, kelasWrapId) {
+            let sel = document.getElementById(selectId);
+            if (!sel) return;
+            let nonKBM = isKeperluanNonKBM(sel.value);
+            let sWrap = document.getElementById(siswaWrapId);
+            let sInp = document.getElementById(siswaInputId);
+            let kWrap = document.getElementById(kelasWrapId);
+
+            if (nonKBM) {
+                if (sWrap) sWrap.classList.add("hidden");
+                if (sInp) { sInp.required = false; sInp.value = ""; }
+                if (kWrap) kWrap.classList.add("hidden");
+            } else {
+                if (sWrap) sWrap.classList.remove("hidden");
+                if (sInp) sInp.required = true;
+                if (kWrap) kWrap.classList.remove("hidden");
+            }
+        }
+
         function getDaftarKelasArray() {
             let raw = getSetting("Daftar_Kelas");
             let str = (raw && raw !== "Nama Belum Diatur") ? String(raw) : DEFAULT_DAFTAR_KELAS;
@@ -900,7 +1026,6 @@
             if (!el) return;
             let listKelas = getDaftarKelasArray();
             let selSet = new Set(selectedArray.map(s => s.trim()).filter(s => s && s !== "-"));
-            // Sertakan kelas lama jika ada di data tersimpan agar tidak hilang saat diedit
             selSet.forEach(s => { if (!listKelas.includes(s)) listKelas.push(s); });
             el.innerHTML = listKelas.map(k => {
                 let isChk = selSet.has(k) ? "checked" : "";
@@ -1148,7 +1273,7 @@
         }
 
         // ============================================================
-        // 3. NAVIGASI TAB & KALENDER GRID
+        // 3. NAVIGASI TAB & KALENDER GRID INTERAKTIF (KLIK = DETAIL)
         // ============================================================
         function switchAdminTab(tabId, btnElement) {
             document.querySelectorAll('.admin-tab').forEach(t => t.classList.add('hidden'));
@@ -1172,6 +1297,74 @@
             btnElement.classList.remove('text-slate-600');
         }
 
+        function getJadwalPadaTanggal(year, month, day) {
+            let targetDate = new Date(year, month, day, 12, 0, 0);
+            return (db.jadwal || []).filter(j => {
+                if (j.Status_Global !== 'Disetujui' && j.Status_Global !== 'Menunggu Pembatalan' && !String(j.Status_Global || "").includes('Selesai')) return false;
+                let dStart = parseDateAman(j.Tgl_Mulai);
+                let dEnd = parseDateAman(j.Tgl_Selesai || j.Tgl_Mulai);
+                if (!dStart || !dEnd) return false;
+                dStart.setHours(0, 0, 0, 0); dEnd.setHours(23, 59, 59, 999);
+                return targetDate >= dStart && targetDate <= dEnd;
+            });
+        }
+
+        function buatKartuDetailJadwal(j) {
+            let det = (db.detail || []).filter(d => d.ID_Jadwal === j.ID_Jadwal);
+            let itemStr = det.length > 0
+                ? det.map(d => `<span class="inline-block bg-slate-100 border px-2 py-0.5 rounded-lg text-[10px] mr-1 mb-1">${d.Nama_Barang} (x${d.Jumlah})</span>`).join("")
+                : `<span class="text-slate-400 italic">Hanya Penggunaan Ruangan</span>`;
+            let jamM = formatJamTeksClient(j.Jam_Mulai);
+            let jamS = formatJamTeksClient(j.Jam_Selesai);
+            let nonKBM = isKeperluanNonKBM(j.Keperluan);
+            let badgeStatus = j.Status_Global === "Disetujui"
+                ? "bg-emerald-100 text-emerald-700"
+                : (String(j.Status_Global).includes("Selesai") ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700");
+
+            return `<div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
+                <div class="flex justify-between items-start gap-2">
+                    <div>
+                        <span class="bg-emerald-600 text-white px-2 py-0.5 rounded-md text-[10px] font-bold">${j.Keperluan || '-'}</span>
+                        ${!nonKBM && j.Kelas && j.Kelas !== '-' ? `<span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md text-[10px] font-bold ml-1">Kelas: ${j.Kelas}</span>` : ''}
+                        ${!nonKBM && j.Jumlah_Siswa ? `<span class="bg-white border text-slate-600 px-2 py-0.5 rounded-md text-[10px] font-bold ml-1">${j.Jumlah_Siswa} Siswa</span>` : ''}
+                    </div>
+                    <span class="${badgeStatus} px-2 py-0.5 rounded-md text-[10px] font-bold shrink-0">${j.Status_Global}</span>
+                </div>
+                <h4 class="font-bold text-sm text-slate-800">${j.Topik_Materi || j.Keperluan}</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] text-slate-600 bg-white p-2.5 rounded-xl border">
+                    <div><b>Penanggung Jawab:</b><br>🧑‍🏫 ${j.Peminjam} (${j.Unit})</div>
+                    <div><b>Waktu Pelaksanaan:</b><br>🗓️ ${formatDateStr(j.Tgl_Mulai)}${toInputDateValue(j.Tgl_Selesai) && toInputDateValue(j.Tgl_Selesai) !== toInputDateValue(j.Tgl_Mulai) ? ' s.d ' + formatDateStr(j.Tgl_Selesai) : ''}<br>🕒 ${jamM}${jamS ? ' - ' + jamS : ''}</div>
+                </div>
+                <div><div class="text-[10px] font-bold text-slate-500 uppercase mb-1">Fasilitas / Alat / Bahan:</div><div>${itemStr}</div></div>
+            </div>`;
+        }
+
+        function bukaDetailKalenderTanggal(year, month, day) {
+            let tglLabel = formatDateStr(new Date(year, month, day));
+            let events = getJadwalPadaTanggal(year, month, day);
+            document.getElementById("detailKalenderTitle").textContent = `Jadwal Lab — ${tglLabel}`;
+            let body = document.getElementById("detailKalenderBody");
+            if (events.length === 0) {
+                body.innerHTML = `<div class="p-8 text-center bg-emerald-50/50 border border-emerald-100 rounded-2xl">
+                    <div class="text-3xl mb-2">✅</div>
+                    <div class="font-bold text-emerald-800 text-sm">Belum ada aktivitas terjadwal</div>
+                    <p class="text-xs text-slate-500 mt-1">Laboratorium tersedia pada tanggal ${tglLabel}.</p>
+                </div>`;
+            } else {
+                body.innerHTML = events.map(j => buatKartuDetailJadwal(j)).join("");
+            }
+            document.getElementById("modalDetailKalender").classList.remove("hidden");
+        }
+
+        function bukaDetailKalenderItem(idJadwal, evt) {
+            if (evt) evt.stopPropagation();
+            let j = (db.jadwal || []).find(x => x.ID_Jadwal === idJadwal);
+            if (!j) return;
+            document.getElementById("detailKalenderTitle").textContent = `Detail Aktivitas Laboratorium`;
+            document.getElementById("detailKalenderBody").innerHTML = buatKartuDetailJadwal(j);
+            document.getElementById("modalDetailKalender").classList.remove("hidden");
+        }
+
         function renderGridCalendar(containerId) {
             let container = document.getElementById(containerId);
             if (!container) return;
@@ -1187,27 +1380,22 @@
             for (let i = 0; i < firstDayIndex; i++) html += `<div class="p-1 md:p-2 bg-transparent"></div>`;
 
             for (let i = 1; i <= daysInMonth; i++) {
-                let loopDate = new Date(currentYear, currentMonth, i, 12, 0, 0);
-                let events = (db.jadwal || []).filter(j => {
-                    if (j.Status_Global !== 'Disetujui' && j.Status_Global !== 'Menunggu Pembatalan') return false;
-                    let dStart = parseDateAman(j.Tgl_Mulai);
-                    let dEnd = parseDateAman(j.Tgl_Selesai || j.Tgl_Mulai);
-                    if (!dStart || !dEnd) return false;
-                    dStart.setHours(0, 0, 0, 0); dEnd.setHours(23, 59, 59, 999);
-                    return loopDate >= dStart && loopDate <= dEnd;
-                });
-
+                let events = getJadwalPadaTanggal(currentYear, currentMonth, i);
                 let isToday = (i === now.getDate());
-                let todayClass = isToday ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200';
+                let todayClass = isToday ? 'bg-emerald-50 border-emerald-400 ring-1 ring-emerald-200' : 'bg-white border-slate-200';
                 let eventHtml = '';
                 events.forEach(e => {
                     let isMine = String(e.Peminjam || "").includes(curUser.Nama_Lengkap);
-                    let color = isMine ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700';
-                    let infoTitle = `${e.Peminjam} | ${e.Keperluan} | Kelas: ${e.Kelas || '-'} | ${e.Topik_Materi || '-'}`;
-                    eventHtml += `<div class="${color} text-[8px] md:text-[9px] p-1 mt-1 rounded truncate leading-tight shadow-sm" title="${infoTitle}">${String(e.Peminjam || "").split(" ")[0]}${e.Kelas && e.Kelas !== '-' ? ' (' + e.Kelas + ')' : ''}</div>`;
+                    let isNonKBM = isKeperluanNonKBM(e.Keperluan);
+                    let color = isNonKBM
+                        ? 'bg-amber-500 text-white hover:bg-amber-600'
+                        : (isMine ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200');
+                    let jamTxt = formatJamTeksClient(e.Jam_Mulai);
+                    let labelRingkas = `${jamTxt ? jamTxt + ' ' : ''}${String(e.Peminjam || "").split(" ")[0]}${!isNonKBM && e.Kelas && e.Kelas !== '-' ? ' (' + e.Kelas + ')' : ''}`;
+                    eventHtml += `<div onclick="bukaDetailKalenderItem('${e.ID_Jadwal}', event)" class="${color} text-[8px] md:text-[9px] p-1 mt-1 rounded truncate leading-tight shadow-sm cursor-pointer transition-colors" title="Klik untuk lihat detail">${labelRingkas}</div>`;
                 });
 
-                html += `<div class="border rounded-lg p-1 md:p-1.5 min-h-[60px] md:min-h-[80px] text-left overflow-hidden ${todayClass} hover:shadow-md transition-shadow"><div class="font-bold text-slate-700 text-xs ${isToday ? 'text-emerald-700' : ''}">${i}</div>${eventHtml}</div>`;
+                html += `<div onclick="bukaDetailKalenderTanggal(${currentYear}, ${currentMonth}, ${i})" class="border rounded-lg p-1 md:p-1.5 min-h-[64px] md:min-h-[84px] text-left overflow-hidden cursor-pointer ${todayClass} hover:shadow-md hover:border-emerald-400 transition-all"><div class="flex justify-between items-center"><span class="font-bold text-slate-700 text-xs ${isToday ? 'text-emerald-700' : ''}">${i}</span>${events.length > 0 ? `<span class="text-[8px] font-bold text-emerald-700 bg-emerald-100 px-1 rounded">${events.length}</span>` : ''}</div>${eventHtml}</div>`;
             }
             html += `</div>`;
             container.innerHTML = html;
@@ -1249,8 +1437,11 @@
                 let pinjamAlat = (db.detail || []).filter(d => d.ID_Jadwal === jdwl.ID_Jadwal).map(d => `${d.Nama_Barang} (x${d.Jumlah})`).join(", ");
                 let waIcon = ""; let waNum = getWA(jdwl.Peminjam);
                 if (waNum) waIcon = `<a href="https://wa.me/${waNum}" target="_blank" title="Chat WA" class="text-green-500 ml-1">💬</a>`;
-                let infoKelas = jdwl.Kelas && jdwl.Kelas !== "-" ? `<span class="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold">Kelas: ${jdwl.Kelas}</span>` : "";
-                let infoSiswa = jdwl.Jumlah_Siswa ? `<span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-bold">${jdwl.Jumlah_Siswa} Siswa</span>` : "";
+                let nonKBM = isKeperluanNonKBM(jdwl.Keperluan);
+                let infoKelas = !nonKBM && jdwl.Kelas && jdwl.Kelas !== "-" ? `<span class="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold">Kelas: ${jdwl.Kelas}</span>` : "";
+                let infoSiswa = !nonKBM && jdwl.Jumlah_Siswa ? `<span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-bold">${jdwl.Jumlah_Siswa} Siswa</span>` : "";
+                let jamM = formatJamTeksClient(jdwl.Jam_Mulai);
+                let jamS = formatJamTeksClient(jdwl.Jam_Selesai);
 
                 container.innerHTML += `<div class="bg-white p-5 border border-slate-200 rounded-2xl flex flex-col justify-between h-full shadow-sm">
                     <div class="mb-4">
@@ -1259,8 +1450,8 @@
                             <button onclick="bukaModalJadwalAdmin('${jdwl.ID_Jadwal}')" class="text-blue-600 hover:underline text-[10px] font-bold">✏️ Edit</button>
                         </div>
                         <h4 class="font-bold text-sm text-slate-800">${jdwl.Topik_Materi || jdwl.Keperluan}</h4>
-                        <div class="flex flex-wrap gap-1 mt-1.5"><span class="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded text-[10px] font-bold">${jdwl.Keperluan}</span>${infoKelas}${infoSiswa}</div>
-                        <div class="text-[11px] text-slate-500 mt-2"><p>🧑‍🏫 <b>${jdwl.Peminjam}</b> ${waIcon}</p><p>🕒 ${formatDateStr(jdwl.Tgl_Mulai)} s.d ${formatDateStr(jdwl.Tgl_Selesai)} (${jdwl.Jam_Mulai} - ${jdwl.Jam_Selesai})</p></div>
+                        <div class="flex flex-wrap gap-1 mt-1.5"><span class="${nonKBM ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'} px-1.5 py-0.5 rounded text-[10px] font-bold">${jdwl.Keperluan}</span>${infoKelas}${infoSiswa}</div>
+                        <div class="text-[11px] text-slate-500 mt-2"><p>🧑‍🏫 <b>${jdwl.Peminjam}</b> ${waIcon}</p><p>🕒 ${formatDateStr(jdwl.Tgl_Mulai)} s.d ${formatDateStr(jdwl.Tgl_Selesai)} (${jamM} - ${jamS})</p></div>
                         <div class="text-[10px] text-slate-600 bg-slate-50 border p-2 rounded-lg mt-3 font-medium">📦 ${pinjamAlat || 'Hanya Ruangan'}</div>
                     </div>
                     <div class="flex gap-2 mt-auto pt-4 border-t">
@@ -1287,6 +1478,9 @@
             jadwalAktif.forEach(j => {
                 let pinjamAlat = (db.detail || []).filter(d => d.ID_Jadwal === j.ID_Jadwal).map(d => `${d.Nama_Barang} (x${d.Jumlah})`).join(", ") || 'Hanya Ruangan';
                 let aksi = ""; let isReqCancel = j.Status_Global === "Menunggu Pembatalan";
+                let nonKBM = isKeperluanNonKBM(j.Keperluan);
+                let jamM = formatJamTeksClient(j.Jam_Mulai);
+                let jamS = formatJamTeksClient(j.Jam_Selesai);
 
                 if (curUser.Role === "Admin") {
                     aksi = `<div class="flex flex-wrap justify-end gap-1">`;
@@ -1296,15 +1490,15 @@
                         : `<button onclick="bukaModalBatal('${j.ID_Jadwal}', 'Admin')" class="border border-red-200 text-red-500 hover:bg-red-50 px-2 py-1 rounded text-[10px] font-bold">Batalkan</button>`;
                     let waNum = getWA(j.Peminjam);
                     if (waNum) {
-                        let textMsg = `Halo ${String(j.Peminjam).split(" (")[0]}, waktu peminjaman lab/alat Anda telah habis. Mohon segera mengembalikan alat dan mengisi laporan pasca praktikum di sistem SI-LAB.`;
+                        let textMsg = `Halo ${String(j.Peminjam).split(" (")[0]}, waktu peminjaman lab/alat Anda telah habis. Mohon segera mengembalikan alat, merapikan ruangan, dan mengisi laporan pasca-kegiatan di sistem SI-LAB.`;
                         aksi += `<a href="https://wa.me/${waNum}?text=${encodeURIComponent(textMsg)}" target="_blank" class="bg-green-500 text-white px-2 py-1 rounded text-[10px] font-bold hover:bg-green-600 transition-colors">💬 WA</a>`;
                     }
                     aksi += `</div>`;
                 }
 
                 let warningCancel = isReqCancel ? `<div class="mt-1 text-[9px] text-red-500 font-bold">*Dalam proses pembatalan</div>` : ``;
-                let badgeMeta = `<div class="flex flex-wrap gap-1 mb-1"><span class="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded text-[10px] font-bold">${j.Keperluan}</span>${j.Kelas && j.Kelas !== '-' ? `<span class="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold">Kelas: ${j.Kelas}</span>` : ''}${j.Jumlah_Siswa ? `<span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-bold">${j.Jumlah_Siswa} Siswa</span>` : ''}</div>`;
-                tbody.innerHTML += `<tr class="border-b bg-white hover:bg-slate-50"><td class="p-3"><div class="font-bold text-sm text-slate-800">${formatDateStr(j.Tgl_Mulai)}<br><span class="text-[10px] font-normal text-slate-500">s.d ${formatDateStr(j.Tgl_Selesai)}</span></div><div class="text-[10px] text-slate-500 mt-0.5">Pukul: ${j.Jam_Mulai} - ${j.Jam_Selesai}</div><div class="text-[11px] mt-2 font-medium text-emerald-700">🧑‍🏫 ${String(j.Peminjam).split(" (")[0]} (${j.Unit})</div></td><td class="p-3">${badgeMeta}<div class="text-xs font-bold text-slate-700 mb-1">${j.Topik_Materi || j.Keperluan}</div><div class="text-[10px] text-slate-500 bg-slate-50 p-1.5 border rounded">📦 ${pinjamAlat}</div>${warningCancel}</td><td class="p-3 text-right align-middle">${aksi}</td></tr>`;
+                let badgeMeta = `<div class="flex flex-wrap gap-1 mb-1"><span class="${nonKBM ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'} px-1.5 py-0.5 rounded text-[10px] font-bold">${j.Keperluan}</span>${!nonKBM && j.Kelas && j.Kelas !== '-' ? `<span class="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold">Kelas: ${j.Kelas}</span>` : ''}${!nonKBM && j.Jumlah_Siswa ? `<span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-bold">${j.Jumlah_Siswa} Siswa</span>` : ''}</div>`;
+                tbody.innerHTML += `<tr class="border-b bg-white hover:bg-slate-50"><td class="p-3"><div class="font-bold text-sm text-slate-800">${formatDateStr(j.Tgl_Mulai)}<br><span class="text-[10px] font-normal text-slate-500">s.d ${formatDateStr(j.Tgl_Selesai)}</span></div><div class="text-[10px] text-slate-500 mt-0.5">Pukul: ${jamM} - ${jamS}</div><div class="text-[11px] mt-2 font-medium text-emerald-700">🧑‍🏫 ${String(j.Peminjam).split(" (")[0]} (${j.Unit})</div></td><td class="p-3">${badgeMeta}<div class="text-xs font-bold text-slate-700 mb-1">${j.Topik_Materi || j.Keperluan}</div><div class="text-[10px] text-slate-500 bg-slate-50 p-1.5 border rounded">📦 ${pinjamAlat}</div>${warningCancel}</td><td class="p-3 text-right align-middle">${aksi}</td></tr>`;
             });
         }
 
@@ -1321,11 +1515,12 @@
                 document.getElementById("admJdwUnit").value = j.Unit === "MA" ? "MA" : "MTs";
                 document.getElementById("admJdwTglM").value = toInputDateValue(j.Tgl_Mulai);
                 document.getElementById("admJdwTglS").value = toInputDateValue(j.Tgl_Selesai || j.Tgl_Mulai);
-                document.getElementById("admJdwJamM").value = j.Jam_Mulai || "07:30";
-                document.getElementById("admJdwJamS").value = j.Jam_Selesai || "09:00";
+                document.getElementById("admJdwJamM").value = formatJamTeksClient(j.Jam_Mulai) || "07:30";
+                document.getElementById("admJdwJamS").value = formatJamTeksClient(j.Jam_Selesai) || "09:00";
                 let selKep = document.getElementById("admJdwKeperluan");
                 selKep.value = Array.from(selKep.options).some(o => o.value === j.Keperluan) ? j.Keperluan : "Praktikum di Lab";
-                document.getElementById("admJdwSiswa").value = j.Jumlah_Siswa || 0;
+                toggleNonKBMField('admJdwKeperluan', 'admJdwSiswaWrap', 'admJdwSiswa', 'admJdwKelasWrap');
+                if (!isKeperluanNonKBM(selKep.value)) document.getElementById("admJdwSiswa").value = j.Jumlah_Siswa || 0;
                 document.getElementById("admJdwTopik").value = j.Topik_Materi || j.Keperluan || "";
                 let kelasArr = String(j.Kelas || "").split(",").map(s => s.trim()).filter(Boolean);
                 renderKelasCheckboxes("admJdwKelasCheckboxes", "admJdwKelasCb", kelasArr);
@@ -1338,6 +1533,7 @@
                 document.getElementById("admJdwID").value = "";
                 document.getElementById("admJdwUnit").value = (curUser.Unit === "MA") ? "MA" : "MTs";
                 document.getElementById("admJdwAutoApprove").checked = true;
+                toggleNonKBMField('admJdwKeperluan', 'admJdwSiswaWrap', 'admJdwSiswa', 'admJdwKelasWrap');
                 renderKelasCheckboxes("admJdwKelasCheckboxes", "admJdwKelasCb", []);
                 document.getElementById("admJdwItemSection").classList.remove("hidden");
                 renderAdminItemPicker();
@@ -1362,7 +1558,11 @@
         async function simpanJadwalAdmin(e) {
             e.preventDefault();
             let mode = document.getElementById("admJdwMode").value;
-            let kelasStr = getSelectedKelas("admJdwKelasCb") || "-";
+            let kep = document.getElementById("admJdwKeperluan").value;
+            let nonKBM = isKeperluanNonKBM(kep);
+            let kelasStr = nonKBM ? "-" : (getSelectedKelas("admJdwKelasCb") || "-");
+            let jmlSiswa = nonKBM ? 0 : (parseInt(document.getElementById("admJdwSiswa").value) || 0);
+
             let btn = document.getElementById("btnSimpanJadwalAdmin");
             let ot = btn.textContent; btn.textContent = "Menyimpan..."; btn.disabled = true;
 
@@ -1377,10 +1577,10 @@
                     tglSelesai: document.getElementById("admJdwTglS").value,
                     jamMulai: document.getElementById("admJdwJamM").value,
                     jamSelesai: document.getElementById("admJdwJamS").value,
-                    keperluan: document.getElementById("admJdwKeperluan").value,
+                    keperluan: kep,
                     kelas: kelasStr,
                     topik_materi: document.getElementById("admJdwTopik").value,
-                    jumlah_siswa: parseInt(document.getElementById("admJdwSiswa").value) || 0
+                    jumlah_siswa: jmlSiswa
                 });
             } else {
                 let manualCartArr = [];
@@ -1399,10 +1599,10 @@
                     tglSelesai: document.getElementById("admJdwTglS").value,
                     jamMulai: document.getElementById("admJdwJamM").value,
                     jamSelesai: document.getElementById("admJdwJamS").value,
-                    keperluan: document.getElementById("admJdwKeperluan").value,
+                    keperluan: kep,
                     kelas: kelasStr,
                     topik_materi: document.getElementById("admJdwTopik").value,
-                    jumlah_siswa: parseInt(document.getElementById("admJdwSiswa").value) || 0,
+                    jumlah_siswa: jmlSiswa,
                     cart: manualCartArr,
                     auto_approve: document.getElementById("admJdwAutoApprove").checked
                 });
@@ -1587,7 +1787,7 @@
                 <div class="kop-surat">
                     <h1>Yayasan Pesantren Sabilunnajah</h1>
                     <h2>Laboratorium IPA Terpadu (MTs &amp; MA)</h2>
-                    <p>Jl. Citarik Baru (Jembatan 2), Desa Sukamanah, Kecamatan Rancaekek, Kabupaten Bandung, Jawa Barat</p>
+                    <p>Jl. Sindangreret No.12, Kec. Cilengkrang, Kabupaten Bandung, Jawa Barat</p>
                 </div>`;
 
             printWindow.document.write('<html><head><title>Cetak Dokumen Resmi</title>' + cssPrint + '</head><body>' + kopSurat + htmlBodyContent + '</body></html>');
@@ -1650,12 +1850,12 @@
                 String(lapor.URL_Foto_Bukti).split(",").forEach(u => { imgHtml += `<img src="${u.trim()}" style="width:200px; height:200px; object-fit:cover; margin:10px; border:1px solid #ccc; display:inline-block;"/>`; });
             } else { imgHtml = "<i>(Tidak ada lampiran foto bukti)</i>"; }
 
-            let html = `<h3 style="text-align:center; text-decoration:underline; margin-bottom:20px;">DOKUMEN LAPORAN PASCA PRAKTIKUM</h3>
+            let html = `<h3 style="text-align:center; text-decoration:underline; margin-bottom:20px;">DOKUMEN LAPORAN PASCA KEGIATAN / PRAKTIKUM</h3>
             <table style="border:none;">
                 <tr><td style="width:150px; border:none; padding:4px;"><b>Tanggal Lapor</b></td><td style="border:none; padding:4px;">: ${formatDateStr(lapor.Tanggal_Lapor)}</td></tr>
                 <tr><td style="border:none; padding:4px;"><b>Nama Pelapor</b></td><td style="border:none; padding:4px;">: ${lapor.Peminjam}</td></tr>
                 <tr><td style="border:none; padding:4px;"><b>Kelas / Layanan</b></td><td style="border:none; padding:4px;">: ${jdwl ? ((jdwl.Kelas || '-') + ' / ' + jdwl.Keperluan) : '-'}</td></tr>
-                <tr><td style="border:none; padding:4px;"><b>Topik / Materi</b></td><td style="border:none; padding:4px;">: ${jdwl ? (jdwl.Topik_Materi || jdwl.Keperluan) : '-'}</td></tr>
+                <tr><td style="border:none; padding:4px;"><b>Topik / Kegiatan</b></td><td style="border:none; padding:4px;">: ${jdwl ? (jdwl.Topik_Materi || jdwl.Keperluan) : '-'}</td></tr>
             </table>
             <p style="margin-top:15px;"><b>Evaluasi / Kondisi Akhir Fasilitas:</b><br/>${lapor.Kondisi_Bahan_Alat}</p>
             <p><b>Laporan Insiden / Kecelakaan Kerja:</b><br/><span style="color:red; font-weight:bold;">${lapor.Insiden_Kecelakaan}</span> - Kronologi: ${lapor.Kronologi_Insiden || 'Tidak ada kejadian menonjol'}</p>
@@ -1668,26 +1868,29 @@
             let jdwl = (db.jadwal || []).find(j => j.ID_Jadwal === idJadwal); if (!jdwl) return alert("Data tidak ditemukan.");
             let det = (db.detail || []).filter(d => d.ID_Jadwal === idJadwal);
             let listStr = det.map(d => `<li>${d.Nama_Barang} - Jumlah: <b>${d.Jumlah}</b> (${d.Kepemilikan})</li>`).join("");
+            let nonKBM = isKeperluanNonKBM(jdwl.Keperluan);
+            let jamM = formatJamTeksClient(jdwl.Jam_Mulai);
+            let jamS = formatJamTeksClient(jdwl.Jam_Selesai);
 
             let html = `<h3 style="text-align:center; text-decoration:underline; font-size:16px;">SURAT BUKTI OTORISASI LABORATORIUM</h3>
             <p>Diterangkan bahwa pemohon di bawah ini telah mendapat izin resmi dari sistem:</p>
             <table style="border:none;">
                 <tr><td style="width:150px; border:none; padding:4px;"><b>Nama Peminjam</b></td><td style="border:none; padding:4px;">: ${jdwl.Peminjam} (${jdwl.Unit})</td></tr>
                 <tr><td style="border:none; padding:4px;"><b>Rentang Tanggal</b></td><td style="border:none; padding:4px;">: ${formatDateStr(jdwl.Tgl_Mulai)} s/d ${formatDateStr(jdwl.Tgl_Selesai)}</td></tr>
-                <tr><td style="border:none; padding:4px;"><b>Waktu / Jam</b></td><td style="border:none; padding:4px;">: ${jdwl.Jam_Mulai} - ${jdwl.Jam_Selesai}</td></tr>
+                <tr><td style="border:none; padding:4px;"><b>Waktu / Jam</b></td><td style="border:none; padding:4px;">: ${jamM} - ${jamS}</td></tr>
                 <tr><td style="border:none; padding:4px;"><b>Keperluan</b></td><td style="border:none; padding:4px;">: ${jdwl.Keperluan}</td></tr>
-                <tr><td style="border:none; padding:4px;"><b>Kelas / Jml Siswa</b></td><td style="border:none; padding:4px;">: ${jdwl.Kelas || '-'} (${jdwl.Jumlah_Siswa || '-'} Siswa)</td></tr>
-                <tr><td style="border:none; padding:4px;"><b>Topik / Materi</b></td><td style="border:none; padding:4px;">: ${jdwl.Topik_Materi || jdwl.Keperluan}</td></tr>
+                ${!nonKBM ? `<tr><td style="border:none; padding:4px;"><b>Kelas / Jml Siswa</b></td><td style="border:none; padding:4px;">: ${jdwl.Kelas || '-'} (${jdwl.Jumlah_Siswa || '-'} Siswa)</td></tr>` : ''}
+                <tr><td style="border:none; padding:4px;"><b>Topik / Kegiatan</b></td><td style="border:none; padding:4px;">: ${jdwl.Topik_Materi || jdwl.Keperluan}</td></tr>
                 <tr><td style="border:none; padding:4px;"><b>Status Sistem</b></td><td style="border:none; padding:4px;">: <b>${jdwl.Status_Global}</b></td></tr>
             </table>
             <p style="margin-top:20px; font-weight:bold;">Daftar Instrumen / Fasilitas Tersertifikasi:</p>
             <ul>${listStr || '<li>Hanya Penggunaan Ruangan</li>'}</ul>
-            <p style="font-size:11px; color:#555; font-style:italic;">Dokumen ini dicetak otomatis dari SI-LAB Sabilunnajah dan sah digunakan sebagai tiket masuk laboratorium.</p>` + getTTDHtml(jdwl.Peminjam);
+            <p style="font-size:11px; color:#555; font-style:italic;">Pemohon wajib menjaga kebersihan, kerapian ruangan, serta mengembalikan seluruh alat/bahan dalam kondisi lengkap dan bersih setelah selesai digunakan.</p>` + getTTDHtml(jdwl.Peminjam);
             executePrint(html);
         }
 
         // ============================================================
-        // 7. GURU: KATALOG, KERANJANG, BOOKING, RIWAYAT & LAPORAN
+        // 7. GURU: KATALOG, KERANJANG, BOOKING + PERINGATAN BERSIH
         // ============================================================
         function filterKategoriGuru(k, btnEl) {
             currentKatFilter = k;
@@ -1791,17 +1994,18 @@
 
         async function submitCheckout(e) {
             e.preventDefault();
-            let kelasStr = getSelectedKelas("outKelasCb");
-            if (!kelasStr) return alert("Pilih minimal 1 kelas terlebih dahulu!");
+            let kep = document.getElementById("outKeperluan").value;
+            let nonKBM = isKeperluanNonKBM(kep);
+            let kelasStr = nonKBM ? "-" : getSelectedKelas("outKelasCb");
+            if (!nonKBM && !kelasStr) return alert("Pilih minimal 1 kelas terlebih dahulu!");
 
             let btn = document.getElementById("btnCheckout"); let ot = btn.textContent; btn.textContent = "Mengirim..."; btn.disabled = true;
             let tglM = document.getElementById("outTglMulai").value;
             let tglS = document.getElementById("outTglSelesai").value;
             let jamM = document.getElementById("outJamMulai").value;
             let jamS = document.getElementById("outJamSelesai").value;
-            let kep = document.getElementById("outKeperluan").value;
             let topik = document.getElementById("outTopik").value;
-            let jmlSiswa = parseInt(document.getElementById("outJmlSiswa").value) || 0;
+            let jmlSiswa = nonKBM ? 0 : (parseInt(document.getElementById("outJmlSiswa").value) || 0);
             let ringkasanCart = cart.map(c => `${c.nama_barang} (x${c.jumlah})`).join(", ");
 
             let res = await fetchAPI({
@@ -1809,17 +2013,32 @@
                 tglMulai: tglM, tglSelesai: tglS, jamMulai: jamM, jamSelesai: jamS,
                 keperluan: kep, kelas: kelasStr, topik_materi: topik, jumlah_siswa: jmlSiswa, cart: cart
             });
-            alert(res.message);
+
             if (res.status === "success") {
                 document.getElementById("formCheckout").reset();
                 document.querySelectorAll('input[name="outKelasCb"]').forEach(cb => cb.checked = false);
+                toggleNonKBMField('outKeperluan', 'outSiswaWrap', 'outJmlSiswa', 'outKelasWrap');
                 cart = []; renderCart(); await loadAllDataSilently();
 
                 let adminWA = curUser.Unit === 'MTs' ? '6285156245801' : '6282215155800';
-                let txtWA = `Halo Admin Lab ${curUser.Unit}, saya ${curUser.Nama_Lengkap} telah mengajukan peminjaman via SI-LAB.\nTanggal: ${formatDateStr(tglM)} s.d ${formatDateStr(tglS)} (${jamM} - ${jamS})\nKeperluan: ${kep}\nKelas: ${kelasStr} (${jmlSiswa} siswa)\nTopik/Materi: ${topik}\nItem: ${ringkasanCart}\nMohon segera dicek dan disetujui. Terima kasih.`;
-                window.open(`https://wa.me/${adminWA}?text=${encodeURIComponent(txtWA)}`, '_blank');
+                let infoKelasWA = nonKBM ? "Non-KBM" : `${kelasStr} (${jmlSiswa} siswa)`;
+                let txtWA = `Halo Admin Lab ${curUser.Unit}, saya ${curUser.Nama_Lengkap} telah mengajukan peminjaman via SI-LAB.\nTanggal: ${formatDateStr(tglM)} s.d ${formatDateStr(tglS)} (${jamM} - ${jamS})\nKeperluan: ${kep}\nKelas/Peserta: ${infoKelasWA}\nTopik/Kegiatan: ${topik}\nItem: ${ringkasanCart}\nMohon segera dicek dan disetujui. Terima kasih.`;
+                pendingWALink = `https://wa.me/${adminWA}?text=${encodeURIComponent(txtWA)}`;
+
+                // Tampilkan Modal Peringatan Kebersihan & Kerapian Lab
+                document.getElementById("modalPeringatanBersih").classList.remove("hidden");
+            } else {
+                alert(res.message);
             }
             btn.textContent = ot; btn.disabled = false;
+        }
+
+        function lanjutKonfirmasiWAPascaPeringatan() {
+            document.getElementById("modalPeringatanBersih").classList.add("hidden");
+            if (pendingWALink) {
+                window.open(pendingWALink, '_blank');
+                pendingWALink = "";
+            }
         }
 
         function renderRiwayatGuru() {
@@ -1839,8 +2058,11 @@
                     btnAksi = `<span class="text-[10px] text-slate-400 font-medium">Selesai/Batal</span>`;
                 }
 
-                let metaRow = `<div class="flex flex-wrap gap-1 mb-1"><span class="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded text-[10px] font-bold">${j.Keperluan}</span>${j.Kelas && j.Kelas !== '-' ? `<span class="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold">Kelas: ${j.Kelas}</span>` : ''}</div><div class="font-medium text-slate-700">${j.Topik_Materi || j.Keperluan}</div>`;
-                list.innerHTML += `<tr class="border-b border-slate-50"><td class="p-4 align-top text-xs font-bold text-slate-700">${formatDateStr(j.Tgl_Mulai)}<br><span class="text-[10px] font-normal text-slate-500">s.d ${formatDateStr(j.Tgl_Selesai)}</span><div class="font-normal text-[10px] text-slate-500 mt-1">${j.Jam_Mulai} - ${j.Jam_Selesai}</div></td><td class="p-4 align-top text-xs text-slate-600">${metaRow}${infoBatal}</td><td class="p-4 align-top text-center"><span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${bG}">${j.Status_Global}</span></td><td class="p-4 align-top text-right w-32">${btnAksi}</td></tr>`;
+                let nonKBM = isKeperluanNonKBM(j.Keperluan);
+                let jamM = formatJamTeksClient(j.Jam_Mulai);
+                let jamS = formatJamTeksClient(j.Jam_Selesai);
+                let metaRow = `<div class="flex flex-wrap gap-1 mb-1"><span class="${nonKBM ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'} px-1.5 py-0.5 rounded text-[10px] font-bold">${j.Keperluan}</span>${!nonKBM && j.Kelas && j.Kelas !== '-' ? `<span class="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold">Kelas: ${j.Kelas}</span>` : ''}</div><div class="font-medium text-slate-700">${j.Topik_Materi || j.Keperluan}</div>`;
+                list.innerHTML += `<tr class="border-b border-slate-50"><td class="p-4 align-top text-xs font-bold text-slate-700">${formatDateStr(j.Tgl_Mulai)}<br><span class="text-[10px] font-normal text-slate-500">s.d ${formatDateStr(j.Tgl_Selesai)}</span><div class="font-normal text-[10px] text-slate-500 mt-1">${jamM} - ${jamS}</div></td><td class="p-4 align-top text-xs text-slate-600">${metaRow}${infoBatal}</td><td class="p-4 align-top text-center"><span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${bG}">${j.Status_Global}</span></td><td class="p-4 align-top text-right w-32">${btnAksi}</td></tr>`;
             });
         }
 
@@ -1914,7 +2136,7 @@
         }
 
         // ============================================================
-        // 8. MODUL BUKU/JURNAL, DATA & GRAFIK LAYANAN (ADMIN V16)
+        // 8. MODUL BUKU/JURNAL, DATA & GRAFIK LAYANAN (ADMIN V17)
         // ============================================================
         function switchSubLayanan(panelId, btn) {
             document.querySelectorAll('.sub-layanan-panel').forEach(p => p.classList.add('hidden'));
@@ -1947,6 +2169,22 @@
                 let hari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"][d.getDay()];
                 return `${hari}, ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
             } catch (e) { return String(dateStr); }
+        }
+
+        function formatRentangTanggalJurnal(tglMulai, tglSelesai) {
+            let s1 = toInputDateValue(tglMulai);
+            let s2 = toInputDateValue(tglSelesai);
+            if (s2 && s2 !== s1) {
+                return `${formatHariTanggal(tglMulai)}<br><span class="text-[10px] text-slate-400">s.d ${formatHariTanggal(tglSelesai)}</span>`;
+            }
+            return formatHariTanggal(tglMulai);
+        }
+
+        function formatRentangTanggalJurnalPrint(tglMulai, tglSelesai) {
+            let s1 = toInputDateValue(tglMulai);
+            let s2 = toInputDateValue(tglSelesai);
+            if (s2 && s2 !== s1) return `${formatHariTanggal(tglMulai)} s.d ${formatHariTanggal(tglSelesai)}`;
+            return formatHariTanggal(tglMulai);
         }
 
         function cocokFilterPeriode(dateStr, unitVal) {
@@ -2006,13 +2244,16 @@
             let j = (db.jadwal || []).find(x => x.ID_Jadwal === idJadwal);
             if (!j) return;
             document.getElementById("jrnTgl").value = toInputDateValue(j.Tgl_Mulai);
-            document.getElementById("jrnJam").value = `${j.Jam_Mulai || ''} - ${j.Jam_Selesai || ''}`;
+            document.getElementById("jrnTglSelesai").value = toInputDateValue(j.Tgl_Selesai || j.Tgl_Mulai);
+            document.getElementById("jrnJamMulai").value = formatJamTeksClient(j.Jam_Mulai) || "";
+            document.getElementById("jrnJamSelesai").value = formatJamTeksClient(j.Jam_Selesai) || "";
             document.getElementById("jrnTopik").value = j.Topik_Materi || j.Keperluan || "";
             document.getElementById("jrnGuru").value = j.Peminjam ? String(j.Peminjam).split(" (")[0] : "";
             document.getElementById("jrnUnit").value = j.Unit === "MA" ? "MA" : "MTs";
-            document.getElementById("jrnSiswa").value = j.Jumlah_Siswa || 0;
             let selJenis = document.getElementById("jrnJenis");
             selJenis.value = Array.from(selJenis.options).some(o => o.value === j.Keperluan) ? j.Keperluan : "Praktikum di Lab";
+            toggleNonKBMField('jrnJenis', 'jrnSiswaWrap', 'jrnSiswa', 'jrnKelasWrap');
+            if (!isKeperluanNonKBM(selJenis.value)) document.getElementById("jrnSiswa").value = j.Jumlah_Siswa || "";
 
             let kelasArr = String(j.Kelas || "").split(",").map(s => s.trim()).filter(Boolean);
             let daftarStandar = getDaftarKelasArray();
@@ -2024,7 +2265,7 @@
             document.getElementById("jrnCatatan").value = lap ? lap.Kondisi_Bahan_Alat : "Praktikum berjalan lancar";
         }
 
-        // --- CRUD JURNAL (ADD & EDIT) ---
+        // --- CRUD JURNAL (ADD & EDIT DENGAN RENTANG WAKTU MULAI-AKHIR) ---
         function resetFormJurnal() {
             document.getElementById("formEntriJurnal").reset();
             document.getElementById("jrnMode").value = "add";
@@ -2033,6 +2274,7 @@
             document.getElementById("btnSimpanJurnal").textContent = "Simpan ke Jurnal";
             document.getElementById("btnBatalEditJurnal").classList.add("hidden");
             renderKelasCheckboxes("jrnKelasCheckboxes", "jrnKelasCb", []);
+            toggleNonKBMField('jrnJenis', 'jrnSiswaWrap', 'jrnSiswa', 'jrnKelasWrap');
             if (curUser && (curUser.Unit === "MTs" || curUser.Unit === "MA")) document.getElementById("jrnUnit").value = curUser.Unit;
         }
 
@@ -2045,13 +2287,19 @@
             document.getElementById("btnSimpanJurnal").textContent = "Perbarui Jurnal";
             document.getElementById("btnBatalEditJurnal").classList.remove("hidden");
             document.getElementById("jrnTgl").value = toInputDateValue(j.Tanggal);
-            document.getElementById("jrnJam").value = j.Jam_Ke || "";
-            document.getElementById("jrnSiswa").value = j.Jumlah_Siswa || 0;
+            document.getElementById("jrnTglSelesai").value = toInputDateValue(j.Tanggal_Selesai || j.Tanggal);
+
+            let jm = pecahRentangJam(j.Jam_Ke);
+            document.getElementById("jrnJamMulai").value = jm.mulai || "07:30";
+            document.getElementById("jrnJamSelesai").value = jm.selesai || "09:00";
+
             document.getElementById("jrnTopik").value = j.Mapel_Topik || "";
             document.getElementById("jrnGuru").value = j.Guru_Pengampu || "";
             document.getElementById("jrnUnit").value = j.Unit === "MA" ? "MA" : "MTs";
             let selJenis = document.getElementById("jrnJenis");
             selJenis.value = Array.from(selJenis.options).some(o => o.value === j.Jenis_Layanan) ? j.Jenis_Layanan : "Praktikum di Lab";
+            toggleNonKBMField('jrnJenis', 'jrnSiswaWrap', 'jrnSiswa', 'jrnKelasWrap');
+            if (!isKeperluanNonKBM(selJenis.value)) document.getElementById("jrnSiswa").value = j.Jumlah_Siswa || "";
             document.getElementById("jrnCatatan").value = j.Kondisi_Catatan || "";
 
             let kelasArr = String(j.Kelas || "").split(",").map(s => s.trim()).filter(Boolean);
@@ -2064,22 +2312,33 @@
 
         async function simpanEntriJurnal(e) {
             e.preventDefault();
-            let kelasStr = getSelectedKelas("jrnKelasCb", "jrnKelasCustom");
-            if (!kelasStr) return alert("Pilih minimal 1 kelas atau ketik nama kelas pada kolom opsional!");
+            let jenis = document.getElementById("jrnJenis").value;
+            let nonKBM = isKeperluanNonKBM(jenis);
+            let kelasStr = nonKBM ? "-" : getSelectedKelas("jrnKelasCb", "jrnKelasCustom");
+            if (!nonKBM && !kelasStr) return alert("Pilih minimal 1 kelas atau ketik nama kelas pada kolom opsional!");
+
+            let tglM = document.getElementById("jrnTgl").value;
+            let tglS = document.getElementById("jrnTglSelesai").value || tglM;
+            let jamM = document.getElementById("jrnJamMulai").value;
+            let jamS = document.getElementById("jrnJamSelesai").value;
+
             let btn = document.getElementById("btnSimpanJurnal"); let ot = btn.textContent; btn.textContent = "Menyimpan..."; btn.disabled = true;
             let res = await fetchAPI({
                 action: "simpanJurnal",
                 mode: document.getElementById("jrnMode").value,
                 id_jurnal: document.getElementById("jrnID").value,
-                tanggal: document.getElementById("jrnTgl").value,
-                jam_ke: document.getElementById("jrnJam").value,
+                tanggal: tglM,
+                tanggal_selesai: tglS,
+                jam_mulai: jamM,
+                jam_selesai: jamS,
+                jam_ke: `${jamM} - ${jamS}`,
                 kelas: kelasStr,
                 mapel_topik: document.getElementById("jrnTopik").value,
                 guru_pengampu: document.getElementById("jrnGuru").value,
                 unit: document.getElementById("jrnUnit").value,
-                jumlah_siswa: document.getElementById("jrnSiswa").value,
-                jenis_layanan: document.getElementById("jrnJenis").value,
-                kondisi_catatan: document.getElementById("jrnCatatan").value || "Alat lengkap & baik"
+                jumlah_siswa: nonKBM ? 0 : (parseInt(document.getElementById("jrnSiswa").value) || 0),
+                jenis_layanan: jenis,
+                kondisi_catatan: document.getElementById("jrnCatatan").value || "Ruang bersih, alat lengkap"
             });
             alert(res.message);
             if (res.status === "success") { resetFormJurnal(); await loadAllDataSilently(); renderModulLayanan(true); }
@@ -2251,7 +2510,10 @@
             } else {
                 jurnalF.forEach((j, idx) => {
                     let badgeSrc = j.ID_Jadwal_Ref ? `<span class="bg-blue-50 text-blue-600 px-1 py-0.5 rounded text-[9px] font-bold ml-1" title="Otomatis dari Booking User">Auto</span>` : ``;
-                    tbJ.innerHTML += `<tr class="hover:bg-slate-50"><td class="p-3 font-bold">${idx + 1}</td><td class="p-3 whitespace-nowrap">${formatHariTanggal(j.Tanggal)}</td><td class="p-3">${j.Jam_Ke}</td><td class="p-3 font-bold">${j.Kelas || '-'} <span class="text-[9px] text-slate-400">(${j.Unit})</span></td><td class="p-3">${j.Mapel_Topik}${badgeSrc}</td><td class="p-3">${j.Guru_Pengampu}</td><td class="p-3 text-center font-bold">${j.Jumlah_Siswa}</td><td class="p-3"><span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">${j.Jenis_Layanan}</span></td><td class="p-3 text-slate-600">${j.Kondisi_Catatan || '-'}</td><td class="p-3 text-right whitespace-nowrap"><button onclick="editEntriJurnal('${j.ID_Jurnal}')" class="text-blue-600 hover:underline font-bold text-[10px] mr-2">Edit</button><button onclick="hapusEntriJurnal('${j.ID_Jurnal}')" class="text-red-500 hover:underline font-bold text-[10px]">Hapus</button></td></tr>`;
+                    let nonKBM = isKeperluanNonKBM(j.Jenis_Layanan);
+                    let siswaTxt = (nonKBM || !parseInt(j.Jumlah_Siswa)) ? "-" : j.Jumlah_Siswa;
+                    let jamTampil = formatJamTeksClient(j.Jam_Ke) || "-";
+                    tbJ.innerHTML += `<tr class="hover:bg-slate-50"><td class="p-3 font-bold">${idx + 1}</td><td class="p-3 whitespace-nowrap">${formatRentangTanggalJurnal(j.Tanggal, j.Tanggal_Selesai)}</td><td class="p-3 whitespace-nowrap">${jamTampil}</td><td class="p-3 font-bold">${j.Kelas || '-'} <span class="text-[9px] text-slate-400">(${j.Unit})</span></td><td class="p-3">${j.Mapel_Topik}${badgeSrc}</td><td class="p-3">${j.Guru_Pengampu}</td><td class="p-3 text-center font-bold">${siswaTxt}</td><td class="p-3"><span class="${nonKBM ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'} px-2 py-0.5 rounded text-[10px] font-bold">${j.Jenis_Layanan}</span></td><td class="p-3 text-slate-600">${j.Kondisi_Catatan || '-'}</td><td class="p-3 text-right whitespace-nowrap"><button onclick="editEntriJurnal('${j.ID_Jurnal}')" class="text-blue-600 hover:underline font-bold text-[10px] mr-2">Edit</button><button onclick="hapusEntriJurnal('${j.ID_Jurnal}')" class="text-red-500 hover:underline font-bold text-[10px]">Hapus</button></td></tr>`;
                 });
             }
 
@@ -2423,9 +2685,13 @@
                 options: { responsive: true, maintainAspectRatio: false, animation: animOpt, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
             });
 
-            let kelasLabels = ["Kelas VII", "Kelas VIII", "Kelas IX", "Kelas X", "Kelas XI", "Kelas XII", "Lainnya"];
+            let kelasLabels = ["Kelas VII", "Kelas VIII", "Kelas IX", "Kelas X", "Kelas XI", "Kelas XII", "Non-KBM / Lain"];
             let kelasCount = [0, 0, 0, 0, 0, 0, 0];
             jurnalF.forEach(j => {
+                if (isKeperluanNonKBM(j.Jenis_Layanan) || !j.Kelas || j.Kelas === "-") {
+                    kelasCount[6]++;
+                    return;
+                }
                 let parts = String(j.Kelas || "").split(",").map(s => s.trim()).filter(Boolean);
                 if (parts.length === 0) kelasCount[6]++;
                 else parts.forEach(p => { kelasCount[klasifikasiTingkatKelas(p)]++; });
@@ -2436,11 +2702,22 @@
                 options: { responsive: true, maintainAspectRatio: false, animation: animOpt, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
             });
 
-            let jenisMap = { "Praktikum di Lab": 0, "Pinjam ke Kelas": 0, "Pembinaan Olimpiade": 0, "Ekstrakurikuler": 0, "Ujian Praktik": 0 };
-            jurnalF.forEach(j => { if (jenisMap[j.Jenis_Layanan] !== undefined) jenisMap[j.Jenis_Layanan]++; else jenisMap["Praktikum di Lab"]++; });
+            let jenisMap = {
+                "Praktikum di Lab": 0,
+                "Pinjam ke Kelas": 0,
+                "Pembinaan Olimpiade": 0,
+                "Ekstrakurikuler": 0,
+                "Ujian Praktik": 0,
+                "Non-KBM (Rapat/Gudang/Panitia)": 0
+            };
+            jurnalF.forEach(j => {
+                if (jenisMap[j.Jenis_Layanan] !== undefined) jenisMap[j.Jenis_Layanan]++;
+                else if (isKeperluanNonKBM(j.Jenis_Layanan)) jenisMap["Non-KBM (Rapat/Gudang/Panitia)"]++;
+                else jenisMap["Praktikum di Lab"]++;
+            });
             buatAtauUpdateChart("chartJenisLayanan", {
                 type: "pie",
-                data: { labels: Object.keys(jenisMap), datasets: [{ data: Object.values(jenisMap), backgroundColor: ["#059669","#f59e0b","#3b82f6","#8b5cf6","#ec4899"] }] },
+                data: { labels: Object.keys(jenisMap), datasets: [{ data: Object.values(jenisMap), backgroundColor: ["#059669","#f59e0b","#3b82f6","#8b5cf6","#ec4899","#64748b"] }] },
                 options: { responsive: true, maintainAspectRatio: false, animation: animOpt, plugins: { title: { display: true, text: "Jenis Layanan", font: { size: 11 } }, legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 9 } } } } }
             });
 
@@ -2485,9 +2762,11 @@
 
             if (jenis === "jurnal") {
                 html = `<h3 class="text-center" style="margin-bottom:4px;">BUKU / JURNAL LAYANAN LABORATORIUM IPA</h3><p class="text-center" style="margin-top:0;font-size:11px;">${infoFilter}</p>
-                <table><thead><tr><th>No</th><th>Hari / Tanggal</th><th>Jam Ke-</th><th>Kelas</th><th>Topik / Materi Praktikum</th><th>Nama Guru Pengampu</th><th>Jml Siswa</th><th>Keperluan / Layanan</th><th>Kondisi Akhir / Catatan</th><th>Paraf Guru</th></tr></thead><tbody>`;
+                <table><thead><tr><th>No</th><th>Hari / Tanggal</th><th>Waktu / Jam</th><th>Kelas</th><th>Topik / Kegiatan</th><th>Nama Guru / PJ</th><th>Jml Siswa</th><th>Keperluan / Layanan</th><th>Kondisi Akhir / Catatan</th><th>Paraf</th></tr></thead><tbody>`;
                 jurnalF.forEach((j, i) => {
-                    html += `<tr><td class="text-center">${i + 1}</td><td>${formatHariTanggal(j.Tanggal)}</td><td class="text-center">${j.Jam_Ke}</td><td class="text-center">${j.Kelas || '-'}</td><td>${j.Mapel_Topik}</td><td>${j.Guru_Pengampu}</td><td class="text-center">${j.Jumlah_Siswa}</td><td>${j.Jenis_Layanan}</td><td>${j.Kondisi_Catatan || '-'}</td><td style="height:28px;"></td></tr>`;
+                    let nonKBM = isKeperluanNonKBM(j.Jenis_Layanan);
+                    let siswaTxt = (nonKBM || !parseInt(j.Jumlah_Siswa)) ? "-" : j.Jumlah_Siswa;
+                    html += `<tr><td class="text-center">${i + 1}</td><td>${formatRentangTanggalJurnalPrint(j.Tanggal, j.Tanggal_Selesai)}</td><td class="text-center">${formatJamTeksClient(j.Jam_Ke) || '-'}</td><td class="text-center">${j.Kelas || '-'}</td><td>${j.Mapel_Topik}</td><td>${j.Guru_Pengampu}</td><td class="text-center">${siswaTxt}</td><td>${j.Jenis_Layanan}</td><td>${j.Kondisi_Catatan || '-'}</td><td style="height:28px;"></td></tr>`;
                 });
                 if (jurnalF.length === 0) html += `<tr><td colspan="10" class="text-center">Belum ada catatan jurnal.</td></tr>`;
                 html += `</tbody></table>`;
